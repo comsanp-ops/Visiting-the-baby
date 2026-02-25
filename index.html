@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบโครงการ เต่งตึงเยี่ยมเตาะแตะ - อบต.พลับพลาไชย</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Kanit -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet CSS & JS (สำหรับแผนที่) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Kanit', 'sans-serif'] },
+                    colors: { primary: '#ec4899', secondary: '#3b82f6', accent: '#eab308' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #f3f4f6; }
+        .sidebar { transition: width 0.3s ease, transform 0.3s ease; }
+        .sidebar-text { transition: opacity 0.2s ease; white-space: nowrap; }
+        .view-section { display: none; animation: fadeIn 0.4s ease; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .form-input {
+            width: 100%; padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+            border: 1px solid #d1d5db; outline: none; transition: border-color 0.2s;
+        }
+        .form-input:focus { border-color: #ec4899; box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2); }
+        
+        #loading-overlay {
+            position: fixed; inset: 0; background: rgba(255,255,255,0.8);
+            z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .hidden-load { display: none !important; }
+        
+        /* ปรับ z-index ของแผนที่เพื่อไม่ให้บัง header */
+        .leaflet-container { z-index: 1 !important; font-family: 'Kanit', sans-serif;}
+    </style>
+</head>
+<body class="overflow-hidden flex h-screen text-gray-800">
+
+    <!-- 🌟 URL ของ Google Apps Script 🌟 -->
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwNtPvw2ruDo4-VULAto-7L3puz7fvfeXQhTJZuUvPll7iVMd-9UBn6q_-tryZcXXEl/exec"; // ใส่ URL ของคุณตรงนี้
+    </script>
+
+    <!-- Loading -->
+    <div id="loading-overlay" class="hidden-load">
+        <i data-lucide="loader-2" class="w-12 h-12 text-pink-500 animate-spin mb-4"></i>
+        <h3 class="text-lg font-bold text-gray-700" id="loading-text">กำลังโหลดข้อมูล...</h3>
+    </div>
+
+    <!-- Sidebar & Header (Mobile Overlay) -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden lg:hidden" onclick="toggleMobileSidebar()"></div>
+
+    <aside id="sidebar" class="sidebar bg-white w-64 h-full shadow-xl flex flex-col fixed lg:relative z-30 transform -translate-x-full lg:translate-x-0">
+        <div class="h-16 flex items-center justify-center border-b px-4 mt-4 mb-4">
+            <div class="sidebar-text text-center">
+                <h1 class="font-bold text-primary leading-tight text-sm">อบต.พลับพลาไชย</h1>
+                <p class="text-xs text-gray-500">โครงการเยี่ยมเตาะแตะ</p>
+            </div>
+        </div>
+        <nav class="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
+            <button onclick="switchView('dashboard')" id="nav-dashboard" class="w-full flex items-center px-3 py-2.5 rounded-lg text-gray-600 hover:bg-pink-50 hover:text-primary transition-colors">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 flex-shrink-0"></i><span class="ml-3 sidebar-text font-medium">Dashboard</span>
+            </button>
+            <button onclick="switchView('form')" id="nav-form" class="w-full flex items-center px-3 py-2.5 rounded-lg text-gray-600 hover:bg-pink-50 hover:text-primary transition-colors">
+                <i data-lucide="clipboard-plus" class="w-5 h-5 flex-shrink-0"></i><span class="ml-3 sidebar-text font-medium">แบบตรวจเยี่ยมทารก</span>
+            </button>
+            <button onclick="switchView('data')" id="nav-data" class="w-full flex items-center px-3 py-2.5 rounded-lg text-gray-600 hover:bg-pink-50 hover:text-primary transition-colors">
+                <i data-lucide="database" class="w-5 h-5 flex-shrink-0"></i><span class="ml-3 sidebar-text font-medium">ข้อมูลเยี่ยมบ้าน</span>
+            </button>
+        </nav>
+        <div class="p-4 border-t hidden lg:flex">
+            <button onclick="toggleSidebar()" class="w-full flex items-center justify-center p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition">
+                <i data-lucide="chevrons-left" id="toggle-icon" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col h-full overflow-hidden">
+        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-4 lg:px-6 z-10 relative">
+            <div class="flex items-center">
+                <button onclick="toggleMobileSidebar()" class="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none mr-2">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <h2 id="header-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-1 rounded border border-blue-200 hidden sm:inline-block">เจ้าหน้าที่สาธารณสุข</span>
+                <div class="w-8 h-8 rounded-full bg-pink-200 flex items-center justify-center text-pink-700 font-bold">จน</div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 lg:p-6">
+            
+            <!-- 🌟 VIEW: DASHBOARD 🌟 -->
+            <div id="view-dashboard" class="view-section active">
+                
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 bg-white p-4 md:p-6 rounded-xl shadow-sm border-l-4 border-pink-500">
+                    <div>
+                        <h2 class="text-lg md:text-2xl font-bold text-gray-800">องค์การบริหารส่วนตำบลพลับพลาไชย</h2>
+                        <p class="text-sm md:text-base text-gray-500 mt-1">ระบบจัดการข้อมูลโครงการ <span class="text-pink-600 font-semibold">"เต่งตึงเยี่ยมเตาะแตะ"</span></p>
+                    </div>
+                </div>
+
+                <!-- 🌟 ตัวกรองข้อมูล (Filters) สำหรับ 14 หมู่บ้าน 🌟 -->
+                <div class="bg-white p-4 rounded-xl shadow-sm mb-6">
+                    <h3 class="text-sm font-bold text-gray-700 mb-3 flex items-center"><i data-lucide="filter" class="w-4 h-4 mr-2"></i> ตัวกรองข้อมูลสถิติและแผนที่</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">หมู่บ้าน</label>
+                            <select id="filterMoo" class="form-input text-sm" onchange="applyFilters()">
+                                <option value="all">-- ทุกหมู่บ้าน --</option>
+                                <option value="หมู่ 1">หมู่ 1</option>
+                                <option value="หมู่ 2">หมู่ 2</option>
+                                <option value="หมู่ 3">หมู่ 3</option>
+                                <option value="หมู่ 4">หมู่ 4</option>
+                                <option value="หมู่ 5">หมู่ 5</option>
+                                <option value="หมู่ 6">หมู่ 6</option>
+                                <option value="หมู่ 7">หมู่ 7</option>
+                                <option value="หมู่ 8">หมู่ 8</option>
+                                <option value="หมู่ 9">หมู่ 9</option>
+                                <option value="หมู่ 10">หมู่ 10</option>
+                                <option value="หมู่ 11">หมู่ 11</option>
+                                <option value="หมู่ 12">หมู่ 12</option>
+                                <option value="หมู่ 13">หมู่ 13</option>
+                                <option value="หมู่ 14">หมู่ 14</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">เพศ</label>
+                            <select id="filterGender" class="form-input text-sm" onchange="applyFilters()">
+                                <option value="all">-- ทุกเพศ --</option>
+                                <option value="ชาย">ชาย</option>
+                                <option value="หญิง">หญิง</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">สถานะของขวัญ</label>
+                            <select id="filterGift" class="form-input text-sm" onchange="applyFilters()">
+                                <option value="all">-- ทั้งหมด --</option>
+                                <option value="มอบแล้ว">มอบแล้ว / เคยรับแล้ว</option>
+                                <option value="ยังไม่ได้มอบ">ยังไม่ได้มอบ</option>
+                            </select>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="resetFilters()" class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium transition">
+                                ล้างค่า
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🌟 สถิติ 4 กล่อง 🌟 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-pink-500 flex items-center">
+                        <div class="bg-pink-100 p-3 rounded-lg text-pink-600 mr-4"><i data-lucide="baby" class="w-6 h-6"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">เด็กแรกเกิด (ตามตัวกรอง)</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-total">0 <span class="text-sm font-normal text-gray-500">คน</span></h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-blue-500 flex items-center">
+                        <div class="bg-blue-100 p-3 rounded-lg text-blue-600 mr-4"><i data-lucide="home" class="w-6 h-6"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">เยี่ยมบ้านแล้ว</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-visited">0 <span class="text-sm font-normal text-gray-500">ครั้ง</span></h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-yellow-500 flex items-center">
+                        <div class="bg-yellow-100 p-3 rounded-lg text-yellow-600 mr-4"><i data-lucide="stethoscope" class="w-6 h-6"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">สุขภาพต้องติดตาม</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-care">0 <span class="text-sm font-normal text-gray-500">ราย</span></h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-green-500 flex items-center">
+                        <div class="bg-green-100 p-3 rounded-lg text-green-600 mr-4"><i data-lucide="gift" class="w-6 h-6"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">มอบของขวัญแล้ว</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="stat-gift">0 <span class="text-sm font-normal text-gray-500">ชุด</span></h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🌟 แผนที่พิกัดบ้าน (Map) 🌟 -->
+                <div class="bg-white rounded-xl shadow-sm p-5 mb-6 relative z-0">
+                    <h3 class="font-bold text-gray-700 mb-4 flex items-center justify-center"><i data-lucide="map" class="w-5 h-5 mr-2 text-blue-500"></i> แผนที่พิกัดบ้านเด็กทารก</h3>
+                    <div id="map" class="h-96 w-full rounded-lg border border-gray-200 shadow-inner bg-gray-100"></div>
+                </div>
+
+                <!-- 🌟 กราฟ (Charts) 🌟 -->
+                <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+                    <h3 class="font-bold text-gray-700 mb-4 text-center">แนวโน้มการเกิด (รายเดือน / ปี)</h3>
+                    <div class="relative h-72 w-full"><canvas id="lineChart"></canvas></div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm p-5">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center">สถิติเด็กแรกเกิดจำแนกตามหมู่บ้าน</h3>
+                        <div class="relative h-64 w-full"><canvas id="barChart"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-5">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center">สัดส่วนเพศ</h3>
+                        <div class="relative h-64 w-full flex justify-center"><canvas id="pieChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm p-5">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center">สถิติการดื่มนม</h3>
+                        <div class="relative h-64 w-full flex justify-center"><canvas id="feedingChart"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-5">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center">ภาพรวมสุขภาพเบื้องต้น</h3>
+                        <div class="relative h-64 w-full flex justify-center"><canvas id="healthChart"></canvas></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- VIEW: FORM -->
+            <div id="view-form" class="view-section">
+                <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="bg-gradient-to-r from-pink-500 to-pink-400 px-6 py-4">
+                        <h2 class="text-white text-xl font-bold flex items-center"><i data-lucide="clipboard-list" class="w-6 h-6 mr-2"></i> แบบฟอร์มบันทึกการตรวจเยี่ยม</h2>
+                    </div>
+                    <div class="p-6">
+                        <form id="visitForm" onsubmit="submitForm(event)" class="space-y-6">
+                            <!-- ทั่วไป -->
+                            <div>
+                                <h3 class="text-lg font-semibold border-b pb-2 mb-4 text-pink-600">ส่วนที่ 1: ข้อมูลทั่วไป</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">วันที่เยี่ยมบ้าน *</label><input type="date" name="visitDate" required class="form-input"></div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">หมู่ที่ *</label>
+                                        <select name="villageMoo" required class="form-input bg-white">
+                                            <option value="">-- เลือกหมู่บ้าน --</option>
+                                            <option value="1">หมู่ 1</option><option value="2">หมู่ 2</option>
+                                            <option value="3">หมู่ 3</option><option value="4">หมู่ 4</option>
+                                            <option value="5">หมู่ 5</option><option value="6">หมู่ 6</option>
+                                            <option value="7">หมู่ 7</option><option value="8">หมู่ 8</option>
+                                            <option value="9">หมู่ 9</option><option value="10">หมู่ 10</option>
+                                            <option value="11">หมู่ 11</option><option value="12">หมู่ 12</option>
+                                            <option value="13">หมู่ 13</option><option value="14">หมู่ 14</option>
+                                        </select>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล เด็กทารก *</label>
+                                        <input list="childNameList" name="childName" id="childNameInput" required placeholder="เลือกรายชื่อจากระบบ หรือ พิมพ์ชื่อเด็กใหม่เพื่อเพิ่มข้อมูล..." class="form-input bg-white" onchange="autoFillChildData()">
+                                        <datalist id="childNameList">
+                                            <option value="กำลังโหลดรายชื่อ..."></option>
+                                        </datalist>
+                                        <p class="text-xs text-pink-500 mt-1">* เลือกลิสต์เพื่อดึงประวัติการเยี่ยมล่าสุด หรือ พิมพ์ชื่อใหม่เพื่อเพิ่มเด็กลงระบบ</p>
+                                    </div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">เพศ *</label><select name="gender" required class="form-input bg-white"><option value="">-- ระบุเพศ --</option><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select></div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">วันเกิด *</label><input type="date" name="birthDate" required class="form-input"></div>
+                                </div>
+                            </div>
+                            <!-- สุขภาพ -->
+                            <div>
+                                <h3 class="text-lg font-semibold border-b pb-2 mb-4 text-pink-600 mt-6">ส่วนที่ 2: ข้อมูลสุขภาพ</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">น้ำหนัก (กิโลกรัม) *</label><input type="number" step="0.01" name="weight" required class="form-input"></div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ส่วนสูง (ซม.) *</label><input type="number" step="0.1" name="height" required class="form-input"></div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">การดื่มนม *</label><select name="feedingType" required class="form-input bg-white"><option value="">-- เลือก --</option><option value="นมแม่">นมแม่</option><option value="นมชง">นมชง</option><option value="นมแม่+นมชง">นมแม่+นมชง</option></select></div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">การคลอด *</label><select name="deliveryMethod" required class="form-input bg-white"><option value="">-- เลือก --</option><option value="คลอดเอง">คลอดเอง</option><option value="ผ่าคลอด">ผ่าคลอด</option></select></div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">การขับถ่าย *</label><select name="excretion" required class="form-input bg-white"><option value="">-- เลือก --</option><option value="ปกติ">ปกติ</option><option value="ผิดปกติ">ผิดปกติ</option></select></div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ประวัติวัคซีน *</label><select name="vaccine" required class="form-input bg-white"><option value="">-- เลือก --</option><option value="ครบตามกำหนด">ครบตามกำหนด</option><option value="ไม่ครบตามกำหนด">ไม่ครบตามกำหนด</option></select></div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">ประเมินสุขภาพเบื้องต้น</label>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-gray-50 p-3 rounded-lg border">
+                                            <label class="flex items-center space-x-2"><input type="checkbox" name="healthStatus" value="แข็งแรงดี" class="rounded text-pink-500"> <span class="text-sm">สุขภาพแข็งแรง พัฒนาการสมวัย</span></label>
+                                            <label class="flex items-center space-x-2"><input type="checkbox" name="healthStatus" value="ตัวเหลือง" class="rounded text-pink-500"> <span class="text-sm">มีภาวะตัวเหลือง (ต้องติดตาม)</span></label>
+                                            <label class="flex items-center space-x-2"><input type="checkbox" name="healthStatus" value="สะดืออักเสบ" class="rounded text-pink-500"> <span class="text-sm">สายสะดือมีอาการอักเสบ/แฉะ</span></label>
+                                            <label class="flex items-center space-x-2"><input type="checkbox" name="healthStatus" value="ดื่มนมได้น้อย" class="rounded text-pink-500"> <span class="text-sm">ทารกดูดนมไม่เก่ง</span></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- ครอบครัว -->
+                            <div>
+                                <h3 class="text-lg font-semibold border-b pb-2 mb-4 text-pink-600 mt-6">ส่วนที่ 3: ข้อมูลครอบครัว</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้เลี้ยงดูหลัก *</label><input type="text" name="parentName" required class="form-input"></div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label><input type="tel" name="phone" class="form-input"></div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">การคุมกำเนิด (มารดา)</label><input type="text" name="birthControl" class="form-input"></div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">การมอบชุดรับขวัญ</label><select name="giftGiven" class="form-input bg-white"><option value="มอบแล้ว">มอบแล้ว</option><option value="ยังไม่ได้มอบ">ยังไม่ได้มอบ</option><option value="เคยรับแล้ว">เคยรับแล้ว</option></select></div>
+                                    <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">คำแนะนำที่ให้ / หมายเหตุ</label><textarea name="notes" rows="2" class="form-input resize-none"></textarea></div>
+                                </div>
+                            </div>
+                            <!-- พิกัด & รูป -->
+                            <div>
+                                <h3 class="text-lg font-semibold border-b pb-2 mb-4 text-pink-600 mt-6 flex items-center"><i data-lucide="map-pin" class="w-5 h-5 mr-2"></i> พิกัดและรูปภาพ</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">พิกัดสถานที่ (ละติจูด, ลองจิจูด)</label>
+                                        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                                            <input type="text" id="gpsInput" name="gpsLocation" readonly placeholder="กดปุ่มเพื่อดึงพิกัด..." class="form-input bg-gray-50 text-sm flex-1">
+                                            <button type="button" onclick="getLocation()" class="px-4 py-2 bg-blue-100 text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-200 flex items-center justify-center font-medium whitespace-nowrap transition">
+                                                <i data-lucide="map" class="w-4 h-4 mr-2"></i> ดึงพิกัดปัจจุบัน
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">แนบรูปถ่ายเด็กทารก</label><input type="file" id="childPhoto" accept="image/*" class="w-full text-sm text-gray-500 border border-gray-200 rounded-lg p-1"></div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">แนบรูปถ่ายสภาพบ้าน/ครอบครัว</label><input type="file" id="housePhoto" accept="image/*" class="w-full text-sm text-gray-500 border border-gray-200 rounded-lg p-1"></div>
+                                </div>
+                            </div>
+                            <div class="pt-6 flex justify-end space-x-3 border-t">
+                                <button type="button" onclick="document.getElementById('visitForm').reset(); document.getElementById('gpsInput').value='';" class="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">ล้างฟอร์ม</button>
+                                <button id="submitBtn" type="submit" class="px-6 py-2.5 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-medium flex items-center shadow-md"><i data-lucide="save" class="w-5 h-5 mr-2"></i> บันทึกข้อมูล</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: DATA -->
+            <div id="view-data" class="view-section">
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
+                    <div class="px-6 py-4 border-b flex justify-between items-center bg-blue-50">
+                        <h2 class="text-lg font-bold text-blue-800 flex items-center"><i data-lucide="table-properties" class="w-5 h-5 mr-2"></i>ตารางข้อมูล</h2>
+                        <button onclick="fetchSheetData()" class="px-4 py-2 bg-white border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-100 flex items-center text-sm font-medium"><i data-lucide="refresh-cw" class="w-4 h-4 mr-2" id="refresh-icon"></i> รีเฟรช</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                                    <th class="p-4 border-b">วันที่เยี่ยม</th><th class="p-4 border-b">ชื่อทารก</th><th class="p-4 border-b">หมู่</th>
+                                    <th class="p-4 border-b">สุขภาพ</th><th class="p-4 border-b">สื่อ</th><th class="p-4 border-b text-center">ของขวัญ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody" class="text-sm divide-y divide-gray-100">
+                                <tr><td colspan="6" class="text-center p-8 text-gray-500">รอโหลดข้อมูล...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-4 border-t text-sm text-gray-500"><span id="table-count-label">แสดงข้อมูล 0 รายการ</span></div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Script Logic -->
+    <script>
+        lucide.createIcons();
+        
+        // Data Arrays
+        let appData = [];        // ข้อมูลดิบทั้งหมดจาก Backend
+        let filteredData = [];   // ข้อมูลที่ผ่านการกรองแล้ว (นำไปใช้วาดกราฟ/แผนที่/ตาราง)
+        let childMasterList = [];
+
+        // Charts & Map instances
+        let barChartInst=null, pieChartInst=null, lineChartInst=null, feedingChartInst=null, healthChartInst=null;
+        let map=null, markersGroup=null;
+
+        // --- Sidebar & Views ---
+        const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebar-overlay');
+        let isCollapsed = false;
+        function toggleSidebar() {
+            isCollapsed = !isCollapsed;
+            document.querySelectorAll('.sidebar-text').forEach(t => isCollapsed ? t.classList.add('hidden') : setTimeout(()=>t.classList.remove('hidden'),150));
+            sidebar.classList.toggle('w-64'); sidebar.classList.toggle('w-20');
+            document.getElementById('toggle-icon').setAttribute('data-lucide', isCollapsed ? 'chevrons-right' : 'chevrons-left');
+            lucide.createIcons();
+        }
+        function toggleMobileSidebar() { sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
+        
+        const views = ['dashboard', 'form', 'data'];
+        function switchView(targetView) {
+            views.forEach(v => {
+                document.getElementById(`view-${v}`).classList.remove('active');
+                document.getElementById(`nav-${v}`).classList.remove('bg-pink-100', 'text-primary', 'font-semibold');
+                document.getElementById(`nav-${v}`).classList.add('text-gray-600');
+            });
+            document.getElementById(`view-${targetView}`).classList.add('active');
+            document.getElementById(`nav-${targetView}`).classList.add('bg-pink-100', 'text-primary', 'font-semibold');
+            document.getElementById('header-title').innerText = { 'dashboard':'Dashboard', 'form':'บันทึกข้อมูล', 'data':'ฐานข้อมูล' }[targetView];
+            if(window.innerWidth < 1024) { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); }
+            
+            // รีเฟรชแผนที่เมื่อสลับมาหน้า Dashboard (แก้บัคแผนที่เทา)
+            if(targetView === 'dashboard' && map) setTimeout(() => map.invalidateSize(), 100);
+        }
+
+        // ==========================================
+        // 🌟 Map Initialization & Logic (Leaflet)
+        // ==========================================
+        function initMap() {
+            if(!map) {
+                // ตั้งพิกัดเริ่มต้นไปที่พื้นที่ใกล้เคียง (ตัวอย่าง อบต.พลับพลาไชย)
+                map = L.map('map').setView([14.8, 99.8], 11); 
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
+                markersGroup = L.layerGroup().addTo(map);
+            }
+        }
+
+        function updateMap() {
+            if(!map) initMap();
+            markersGroup.clearLayers();
+            
+            let bounds = [];
+            filteredData.forEach(row => {
+                let gps = row['พิกัดบ้าน'];
+                if(gps && typeof gps === 'string' && gps.includes(',')) {
+                    let coords = gps.split(',');
+                    let lat = parseFloat(coords[0].trim());
+                    let lng = parseFloat(coords[1].trim());
+                    
+                    if(!isNaN(lat) && !isNaN(lng)) {
+                        let health = row['สุขภาพเบื้องต้น'] || '-';
+                        // กำหนดสีของข้อความสุขภาพ
+                        let healthColor = health.includes('แข็งแรง') ? 'text-green-600' : 'text-orange-600';
+                        
+                        // 🌟 สร้าง HTML สำหรับการ์ดข้อมูลแบบละเอียดพร้อมรูปภาพ 🌟
+                        let popupHTML = `
+                            <div class="font-sans" style="min-width: 260px;">
+                                <!-- หัวการ์ด -->
+                                <div class="border-b border-gray-200 pb-2 mb-2">
+                                    <h4 class="font-bold text-pink-600 text-base m-0 leading-tight">${row['ชื่อ-สกุลเด็ก'] || '-'}</h4>
+                                    <span class="text-xs text-gray-500">${row['หมู่บ้าน'] || '-'}</span>
+                                </div>
+                                
+                                <!-- ส่วนแสดงรูปภาพ (แสดงเมื่อมีลิงก์) -->
+                                <div class="flex gap-2 mb-3">
+                                    ${row['รูปลิงก์(เด็ก)'] ? `<div class="flex-1 text-center"><img src="${row['รูปลิงก์(เด็ก)']}" class="w-full h-24 object-cover rounded shadow-sm border border-gray-100 cursor-pointer hover:opacity-80 transition" onclick="window.open('${row['รูปลิงก์(เด็ก)']}')" title="คลิกเพื่อดูรูปเต็ม" alt="เด็ก"><span class="text-[10px] text-gray-400">👶 ทารก</span></div>` : ''}
+                                    ${row['รูปลิงก์(บ้าน)'] ? `<div class="flex-1 text-center"><img src="${row['รูปลิงก์(บ้าน)']}" class="w-full h-24 object-cover rounded shadow-sm border border-gray-100 cursor-pointer hover:opacity-80 transition" onclick="window.open('${row['รูปลิงก์(บ้าน)']}')" title="คลิกเพื่อดูรูปเต็ม" alt="บ้าน"><span class="text-[10px] text-gray-400">🏠 ที่พัก</span></div>` : ''}
+                                </div>
+
+                                <!-- ข้อมูลเชิงลึก -->
+                                <div class="grid grid-cols-2 gap-1 text-xs text-gray-700 mb-2">
+                                    <div><span class="text-gray-400">เพศ:</span> ${row['เพศ'] || '-'}</div>
+                                    <div><span class="text-gray-400">วัคซีน:</span> ${row['ประวัติวัคซีน'] || '-'}</div>
+                                    <div><span class="text-gray-400">น.น.:</span> ${row['น้ำหนัก(กก.)'] || '-'} กก.</div>
+                                    <div><span class="text-gray-400">ส.ส.:</span> ${row['ส่วนสูง(ซม.)'] || '-'} ซม.</div>
+                                    <div class="col-span-2"><span class="text-gray-400">นม:</span> ${row['การดื่มนม'] || '-'}</div>
+                                </div>
+
+                                <!-- สุขภาพและผู้ดูแล -->
+                                <div class="bg-gray-50 p-2 rounded border border-gray-100 text-xs mb-2">
+                                    <div class="mb-1"><span class="text-gray-500">สุขภาพ:</span> <span class="font-semibold ${healthColor}">${health}</span></div>
+                                    <div><span class="text-gray-500">ผู้ดูแล:</span> ${row['ชื่อผู้ปกครอง'] || '-'} ${row['เบอร์โทร'] ? `(${row['เบอร์โทร']})` : ''}</div>
+                                </div>
+                                
+                                <!-- คำแนะนำ (ถ้ามี) -->
+                                ${row['คำแนะนำ/หมายเหตุ'] ? `<div class="text-[11px] text-gray-500 italic bg-pink-50 p-1.5 rounded border border-pink-100" title="${row['คำแนะนำ/หมายเหตุ']}">${row['คำแนะนำ/หมายเหตุ']}</div>` : ''}
+                            </div>
+                        `;
+                        
+                        // ตั้งค่า Popup ให้กว้างขึ้นเพื่อรองรับรูปภาพ
+                        let marker = L.marker([lat, lng]).bindPopup(popupHTML, { maxWidth: 320, minWidth: 280 });
+                        markersGroup.addLayer(marker);
+                        bounds.push([lat, lng]);
+                    }
+                }
+            });
+
+            // ปรับระดับการซูมให้พอดีกับหมุดพิกัดทั้งหมด
+            if(bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [30, 30] });
+            } else {
+                map.setView([14.8, 99.8], 11); // พิกัดเริ่มต้น
+            }
+        }
+
+        function getLocation() {
+            const gpsInput = document.getElementById('gpsInput');
+            gpsInput.value = "กำลังค้นหาพิกัด...";
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => gpsInput.value = `${pos.coords.latitude}, ${pos.coords.longitude}`,
+                    err => { alert('ไม่สามารถดึงพิกัดได้ โปรดเปิด GPS/Location ในอุปกรณ์ของคุณ'); gpsInput.value = ""; },
+                    { enableHighAccuracy: true }
+                );
+            } else { alert("เบราว์เซอร์ไม่รองรับระบบ GPS"); gpsInput.value = ""; }
+        }
+
+        // ==========================================
+        // 🌟 Data Fetch & Filtering Logic
+        // ==========================================
+        async function fetchSheetData() {
+            if(!GAS_URL) { document.getElementById('loading-overlay').classList.add('hidden-load'); return; }
+            document.getElementById('loading-overlay').classList.remove('hidden-load');
+            try {
+                const res = await fetch(GAS_URL);
+                const json = await res.json();
+                if(json.status === 'success') {
+                    appData = json.data; childMasterList = json.childList || [];
+                    populateChildDropdown();
+                    applyFilters(); // กรองข้อมูลเริ่มต้น และอัปเดต Dashboard
+                }
+            } catch (err) { console.error('Fetch Error:', err); } 
+            finally { document.getElementById('loading-overlay').classList.add('hidden-load'); }
+        }
+
+        function resetFilters() {
+            document.getElementById('filterMoo').value = 'all';
+            document.getElementById('filterGender').value = 'all';
+            document.getElementById('filterGift').value = 'all';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const fMoo = document.getElementById('filterMoo').value;
+            const fGen = document.getElementById('filterGender').value;
+            const fGift = document.getElementById('filterGift').value;
+
+            // กรองข้อมูลตามเงื่อนไข
+            filteredData = appData.filter(row => {
+                let matchMoo = fMoo === 'all' || (row['หมู่บ้าน'] && row['หมู่บ้าน'].toString().includes(fMoo));
+                let matchGen = fGen === 'all' || (row['เพศ'] && row['เพศ'].toString() === fGen);
+                
+                let giftStat = (row['สถานะของขวัญ'] || '').toString();
+                let matchGift = true;
+                if(fGift === 'มอบแล้ว') matchGift = giftStat.includes('มอบแล้ว') || giftStat.includes('เคยรับ');
+                if(fGift === 'ยังไม่ได้มอบ') matchGift = giftStat.includes('ยังไม่ได้มอบ');
+
+                return matchMoo && matchGen && matchGift;
+            });
+
+            // อัปเดตส่วนต่างๆ ที่อาศัยข้อมูลหลังถูกกรอง
+            updateDashboardStats();
+            updateCharts();
+            updateMap();
+            updateTable();
+        }
+
+        // ==========================================
+        // 🌟 Update Dashboard Stats & Charts
+        // ==========================================
+        function updateDashboardStats() {
+            let total = filteredData.length, needCare = 0, giftGiven = 0;
+            filteredData.forEach(row => {
+                let h = (row['สุขภาพเบื้องต้น'] || '').toString();
+                if(h && h !== 'แข็งแรงดี' && h !== 'ไม่ได้ระบุ') needCare++;
+                let g = (row['สถานะของขวัญ'] || '').toString();
+                if(g.includes('มอบแล้ว') || g.includes('เคยรับแล้ว')) giftGiven++;
+            });
+            document.getElementById('stat-total').innerHTML = `${total} <span class="text-sm">คน</span>`;
+            document.getElementById('stat-visited').innerHTML = `${total} <span class="text-sm">ครั้ง</span>`;
+            document.getElementById('stat-care').innerHTML = `${needCare} <span class="text-sm">ราย</span>`;
+            document.getElementById('stat-gift').innerHTML = `${giftGiven} <span class="text-sm">ชุด</span>`;
+        }
+
+        function updateCharts() {
+            // โครงสร้างที่รองรับ 14 หมู่บ้าน
+            const mooCounts = {'หมู่ 1':0, 'หมู่ 2':0, 'หมู่ 3':0, 'หมู่ 4':0, 'หมู่ 5':0, 'หมู่ 6':0, 'หมู่ 7':0, 'หมู่ 8':0, 'หมู่ 9':0, 'หมู่ 10':0, 'หมู่ 11':0, 'หมู่ 12':0, 'หมู่ 13':0, 'หมู่ 14':0};
+            const genderCounts = {'ชาย':0, 'หญิง':0};
+            const feedCounts = {'นมแม่':0, 'นมชง':0, 'นมแม่+นมชง':0};
+            const healthCounts = {'แข็งแรงดี':0, 'ตัวเหลือง':0, 'สะดืออักเสบ':0, 'ดื่มนมได้น้อย':0, 'อื่นๆ':0};
+            const birthTrends = {};
+
+            filteredData.forEach(row => {
+                let moo = row['หมู่บ้าน'] ? row['หมู่บ้าน'].toString().trim() : ''; if(mooCounts[moo] !== undefined) mooCounts[moo]++;
+                let gen = row['เพศ'] ? row['เพศ'].toString().trim() : ''; if(genderCounts[gen] !== undefined) genderCounts[gen]++;
+                
+                let feed = row['การดื่มนม'] ? row['การดื่มนม'].toString().trim() : '';
+                if(feedCounts[feed] !== undefined) feedCounts[feed]++;
+
+                let health = row['สุขภาพเบื้องต้น'] ? row['สุขภาพเบื้องต้น'].toString() : '';
+                if(health.includes('แข็งแรง')) healthCounts['แข็งแรงดี']++;
+                else {
+                    let hasIssue = false;
+                    if(health.includes('เหลือง')) { healthCounts['ตัวเหลือง']++; hasIssue=true;}
+                    if(health.includes('สะดือ')) { healthCounts['สะดืออักเสบ']++; hasIssue=true;}
+                    if(health.includes('นม')) { healthCounts['ดื่มนมได้น้อย']++; hasIssue=true;}
+                    if(!hasIssue && health !== 'ไม่ได้ระบุ') healthCounts['อื่นๆ']++;
+                }
+
+                let bDateStr = row['วันเกิด'];
+                if(bDateStr) {
+                    let d = new Date(bDateStr);
+                    if(!isNaN(d)) {
+                        let ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                        birthTrends[ym] = (birthTrends[ym] || 0) + 1;
+                    }
+                }
+            });
+
+            [barChartInst, pieChartInst, lineChartInst, feedingChartInst, healthChartInst].forEach(c => { if(c) c.destroy(); });
+
+            barChartInst = new Chart(document.getElementById('barChart'), {
+                type: 'bar', data: { labels: Object.keys(mooCounts), datasets: [{ data: Object.values(mooCounts), backgroundColor: '#FFA6C9', borderRadius: 6 }] },
+                options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            pieChartInst = new Chart(document.getElementById('pieChart'), {
+                type: 'doughnut', data: { labels: ['ชาย', 'หญิง'], datasets: [{ data: [genderCounts['ชาย'], genderCounts['หญิง']], backgroundColor: ['#89CFF0', '#FFA6C9'], borderWidth: 0 }] },
+                options: { maintainAspectRatio: false }
+            });
+
+            const sortedMonths = Object.keys(birthTrends).sort();
+            const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            const labelsLine = sortedMonths.map(ym => { let [y, m] = ym.split('-'); return `${thaiMonths[parseInt(m)-1]} ${(parseInt(y)+543).toString().substring(2)}`; });
+            lineChartInst = new Chart(document.getElementById('lineChart'), {
+                type: 'line', data: { labels: labelsLine, datasets: [{ label: 'เด็กเกิดใหม่', data: sortedMonths.map(ym => birthTrends[ym]), borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', borderWidth: 3, fill: true, tension: 0.3 }] },
+                options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
+
+            feedingChartInst = new Chart(document.getElementById('feedingChart'), {
+                type: 'pie', data: { labels: Object.keys(feedCounts), datasets: [{ data: Object.values(feedCounts), backgroundColor: ['#fbcfe8', '#bfdbfe', '#fde047'], borderWidth: 1 }] },
+                options: { maintainAspectRatio: false }
+            });
+
+            healthChartInst = new Chart(document.getElementById('healthChart'), {
+                type: 'bar', data: { labels: Object.keys(healthCounts), datasets: [{ label: 'จำนวน (ราย)', data: Object.values(healthCounts), backgroundColor: ['#4ade80', '#fbbf24', '#f87171', '#c084fc', '#9ca3af'], borderRadius: 4 }] },
+                options: { maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+            });
+        }
+
+        // ==========================================
+        // 🌟 Update Table
+        // ==========================================
+        function updateTable() {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+            if(filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-gray-500">ไม่พบข้อมูลตามเงื่อนไขที่กรอง</td></tr>`;
+            } else {
+                [...filteredData].reverse().forEach(row => {
+                    let vDate = row['วันที่เยี่ยมบ้าน'] ? new Date(row['วันที่เยี่ยมบ้าน']).toLocaleDateString('th-TH') : '-';
+                    let healthClass = (row['สุขภาพเบื้องต้น']||'').includes('แข็งแรง') ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700';
+                    let giftClass = (row['สถานะของขวัญ']||'').includes('มอบ') ? 'text-green-500' : 'text-orange-500';
+                    
+                    let mediaLinks = '';
+                    if(row['พิกัดบ้าน']) mediaLinks += `<a href="https://maps.google.com/?q=${row['พิกัดบ้าน']}" target="_blank" class="text-blue-500 hover:underline mr-2 text-xs">📍 แผนที่</a>`;
+                    if(row['รูปลิงก์(เด็ก)']) mediaLinks += `<a href="${row['รูปลิงก์(เด็ก)']}" target="_blank" class="text-pink-500 hover:underline mr-2 text-xs">👶 รูปเด็ก</a>`;
+                    if(row['รูปลิงก์(บ้าน)']) mediaLinks += `<a href="${row['รูปลิงก์(บ้าน)']}" target="_blank" class="text-blue-600 hover:underline text-xs">🏠 รูปบ้าน</a>`;
+                    
+                    let tr = document.createElement('tr'); tr.className = "hover:bg-gray-50";
+                    tr.innerHTML = `
+                        <td class="p-4 text-gray-500">${vDate}</td>
+                        <td class="p-4 font-medium text-gray-800">${row['ชื่อ-สกุลเด็ก'] || '-'}</td>
+                        <td class="p-4">${row['หมู่บ้าน'] || '-'}</td>
+                        <td class="p-4"><span class="${healthClass} px-2 py-1 rounded text-xs">${row['สุขภาพเบื้องต้น']||'-'}</span></td>
+                        <td class="p-4">${mediaLinks||'-'}</td>
+                        <td class="p-4 text-center"><span class="${giftClass} font-medium">${row['สถานะของขวัญ']||'-'}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            document.getElementById('table-count-label').innerText = `แสดงข้อมูล ${filteredData.length} รายการ`;
+        }
+
+        // ==========================================
+        // 🌟 Form Submissions (Image Upload & Auto-fill)
+        // ==========================================
+        function populateChildDropdown() {
+            const datalist = document.getElementById('childNameList');
+            if (!datalist) return;
+            datalist.innerHTML = '';
+            
+            // รวบรวมรายชื่อเด็กจากทั้ง Master List และข้อมูลประวัติทั้งหมด
+            let names = new Set();
+            childMasterList.forEach(child => { if(child['ชื่อ-สกุลเด็ก']) names.add(child['ชื่อ-สกุลเด็ก']); });
+            appData.forEach(row => { if(row['ชื่อ-สกุลเด็ก']) names.add(row['ชื่อ-สกุลเด็ก']); });
+
+            // สร้างตัวเลือก Dropdown
+            names.forEach(name => {
+                let opt = document.createElement('option');
+                opt.value = name;
+                datalist.appendChild(opt);
+            });
+        }
+
+        function autoFillChildData() {
+            const input = document.getElementById('childNameInput');
+            const selectedName = input.value.trim();
+            if(!selectedName) return;
+
+            // ค้นหาข้อมูลจากทะเบียนเด็กทารก
+            let childBaseline = childMasterList.find(c => c['ชื่อ-สกุลเด็ก'] === selectedName);
+            
+            // ค้นหาข้อมูลจากการเยี่ยมล่าสุดใน appData
+            let latestVisit = null;
+            const childVisits = appData.filter(row => row['ชื่อ-สกุลเด็ก'] === selectedName);
+            if(childVisits.length > 0) {
+                latestVisit = childVisits[childVisits.length - 1]; // ดึงประวัติที่ใหม่ที่สุด
+            }
+
+            // 1. เติมข้อมูลพื้นฐานและครอบครัว
+            if (childBaseline || latestVisit) {
+                let genderVal = (childBaseline && childBaseline['เพศ']) || (latestVisit && latestVisit['เพศ']) || '';
+                if(genderVal) document.querySelector('select[name="gender"]').value = genderVal;
+                
+                let bDate = (childBaseline && childBaseline['วันเกิด']) || (latestVisit && latestVisit['วันเกิด']) || '';
+                if(bDate) {
+                    let d = new Date(bDate);
+                    if(!isNaN(d)) document.querySelector('input[name="birthDate"]').value = d.toISOString().split('T')[0];
+                }
+                
+                let parentVal = (childBaseline && childBaseline['ชื่อผู้ปกครอง']) || (latestVisit && latestVisit['ชื่อผู้ปกครอง']) || '';
+                if(parentVal) document.querySelector('input[name="parentName"]').value = parentVal;
+
+                let phoneVal = (childBaseline && childBaseline['เบอร์โทร']) || (latestVisit && latestVisit['เบอร์โทร']) || '';
+                if(phoneVal) document.querySelector('input[name="phone"]').value = phoneVal;
+            }
+
+            // 2. เติมข้อมูลสุขภาพจากการเยี่ยมล่าสุด (เพื่อให้ไม่ต้องพิมพ์ใหม่ทั้งหมด)
+            if(latestVisit) {
+                if(latestVisit['น้ำหนัก(กก.)']) document.querySelector('input[name="weight"]').value = latestVisit['น้ำหนัก(กก.)'];
+                if(latestVisit['ส่วนสูง(ซม.)']) document.querySelector('input[name="height"]').value = latestVisit['ส่วนสูง(ซม.)'];
+                if(latestVisit['การดื่มนม']) document.querySelector('select[name="feedingType"]').value = latestVisit['การดื่มนม'];
+                if(latestVisit['การคลอด']) document.querySelector('select[name="deliveryMethod"]').value = latestVisit['การคลอด'];
+                if(latestVisit['การขับถ่าย']) document.querySelector('select[name="excretion"]').value = latestVisit['การขับถ่าย'];
+                if(latestVisit['ประวัติวัคซีน']) document.querySelector('select[name="vaccine"]').value = latestVisit['ประวัติวัคซีน'];
+                if(latestVisit['การคุมกำเนิด(มารดา)']) document.querySelector('input[name="birthControl"]').value = latestVisit['การคุมกำเนิด(มารดา)'];
+            }
+        }
+
+        function resizeAndGetBase64(file) {
+            return new Promise((resolve, reject) => {
+                if (!file) { resolve(""); return; }
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image(); img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800; const scale = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH; canvas.height = img.height * scale;
+                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]);
+                    };
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        async function submitForm(event) {
+            event.preventDefault();
+            const form = event.target; const formData = new FormData(form);
+            const dataObj = Object.fromEntries(formData.entries());
+            dataObj.healthStatus = formData.getAll('healthStatus').join(', ') || 'ไม่ได้ระบุ';
+
+            if (!GAS_URL) { alert('⚠️ โปรดใส่ GAS_URL ก่อนบันทึก'); return; }
+
+            document.getElementById('loading-text').innerText = "กำลังอัปโหลดรูปและบันทึกข้อมูล...";
+            document.getElementById('loading-overlay').classList.remove('hidden-load');
+
+            try {
+                const fChild = document.getElementById('childPhoto').files[0];
+                const fHouse = document.getElementById('housePhoto').files[0];
+                dataObj.childPhotoBase64 = fChild ? await resizeAndGetBase64(fChild) : "";
+                dataObj.housePhotoBase64 = fHouse ? await resizeAndGetBase64(fHouse) : "";
+
+                const response = await fetch(GAS_URL, {
+                    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(dataObj)
+                });
+                const result = await response.json();
+                if(result.status === 'success') {
+                    alert('✅ บันทึกข้อมูลเรียบร้อย');
+                    form.reset(); document.getElementById('gpsInput').value = '';
+                    switchView('data'); fetchSheetData();
+                } else { alert('❌ เกิดข้อผิดพลาด: ' + result.message); }
+            } catch (error) { alert('เกิดข้อผิดพลาดในการเชื่อมต่อ'); } 
+            finally { 
+                document.getElementById('loading-overlay').classList.add('hidden-load'); 
+                document.getElementById('loading-text').innerText = "กำลังโหลดข้อมูล...";
+            }
+        }
+
+        // ==========================================
+        // 🌟 Initializer
+        // ==========================================
+        window.onload = () => { 
+            initMap(); 
+            switchView('dashboard'); 
+            fetchSheetData(); 
+        };
+    </script>
+</body>
+</html>
