@@ -1,811 +1,2124 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" class="scroll-smooth">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบโครงการ เต่งตึงเยี่ยมเตาะแตะ - อบต.พลับพลาไชย</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Kanit -->
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Leaflet CSS & JS (สำหรับแผนที่) -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#7C8C5A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="หมวกนิรภัย">
+  <meta name="description" content="ระบบสแกนหมวกนิรภัยเด็กอนุบาลด้วย QR Code">
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Kanit', 'sans-serif'] },
-                    colors: { primary: '#ec4899', secondary: '#3b82f6', accent: '#eab308' }
-                }
-            }
+  <title>ระบบสแกนหมวกนิรภัยเด็กอนุบาล</title>
+
+  <!-- Iframe Buster: ดึงแอปออกจาก GAS sandbox เพื่อให้กล้องทำงาน -->
+  <script>
+    (function () {
+      try {
+        if (window.top !== window.self) {
+          var url = window.location.href;
+          if (url.indexOf('gascamera=1') === -1) {
+            var newUrl = url + (url.indexOf('?') > -1 ? '&' : '?') + 'gascamera=1';
+            try { window.top.location.href = newUrl; }
+            catch (e) { window.open(newUrl, '_blank'); }
+          }
         }
-    </script>
-    <style>
-        body { font-family: 'Kanit', sans-serif; background-color: #f3f4f6; }
-        .sidebar { transition: width 0.3s ease, transform 0.3s ease; }
-        .sidebar-text { transition: opacity 0.2s ease; white-space: nowrap; }
-        .view-section { display: none; animation: fadeIn 0.4s ease; }
-        .view-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .form-input {
-            width: 100%; padding: 0.5rem 0.75rem; border-radius: 0.5rem;
-            border: 1px solid #d1d5db; outline: none; transition: border-color 0.2s;
+      } catch (e) {
+        try {
+          var u = window.location.href;
+          if (u.indexOf('gascamera=1') === -1) {
+            window.open(u + (u.indexOf('?') > -1 ? '&' : '?') + 'gascamera=1', '_blank');
+          }
+        } catch (e2) {}
+      }
+    })();
+  </script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cream: { 50:'#FCFAF4', 100:'#F8F4E8', 200:'#F1EAD4', 300:'#E5D9B8' },
+            olive: { 50:'#F5F7EF', 100:'#E9EEDB', 200:'#D3DCB8', 300:'#B6C48D', 400:'#97A868', 500:'#7C8C5A', 600:'#637147', 700:'#4B5537', 800:'#353C28', 900:'#222618' },
+            blush: { 100:'#FBE4E4', 200:'#F5C7C7', 300:'#EEA7A7' },
+            night: { 900:'#171B12', 800:'#1F2418', 700:'#2A3222', 600:'#3A4430' }
+          },
+          fontFamily: { sans: ['"Noto Sans Thai"', '"Sarabun"', 'system-ui', 'sans-serif'] },
+          boxShadow: {
+            soft: '0 4px 24px -8px rgba(124,140,90,0.28)',
+            glow: '0 0 0 4px rgba(124,140,90,0.18)'
+          }
         }
-        .form-input:focus { border-color: #ec4899; box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2); }
-        
-        #loading-overlay {
-            position: fixed; inset: 0; background: rgba(255,255,255,0.8);
-            z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center;
-        }
-        .hidden-load { display: none !important; }
-        
-        /* ปรับ z-index ของแผนที่เพื่อไม่ให้บัง header */
-        .leaflet-container { z-index: 1 !important; font-family: 'Kanit', sans-serif;}
-    </style>
+      }
+    };
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root { --olive: #7C8C5A; --cream: #F8F4E8; }
+    html, body { font-family: 'Noto Sans Thai', system-ui, sans-serif; }
+    body { -webkit-tap-highlight-color: transparent; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #C8D0B5; border-radius: 8px; }
+    .dark ::-webkit-scrollbar-thumb { background: #4B5537; }
+
+    /* Page transition */
+    .page { display: none; animation: fadeUp .35s ease both; }
+    .page.active { display: block; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cards */
+    .glass-card { background: rgba(255,255,255,0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    .dark .glass-card { background: rgba(31,36,24,0.72); }
+
+    /* Gradient backgrounds */
+    .bg-app-light {
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #E9EEDB 0%, transparent 60%),
+        radial-gradient(900px 500px at 90% 0%, #FBE4E4 0%, transparent 55%),
+        radial-gradient(700px 600px at 50% 100%, #F1EAD4 0%, transparent 60%),
+        #FCFAF4;
+    }
+    .dark .bg-app-light {
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #2A3222 0%, transparent 60%),
+        radial-gradient(900px 500px at 90% 0%, #3A2E2E 0%, transparent 55%),
+        radial-gradient(700px 600px at 50% 100%, #222618 0%, transparent 60%),
+        #171B12;
+    }
+
+    /* Bus progress */
+    .bus-icon { transition: left .9s cubic-bezier(.34,1.56,.64,1); filter: drop-shadow(0 3px 4px rgba(0,0,0,.18)); }
+    .progress-track {
+      background: repeating-linear-gradient(45deg, #EFE8D6, #EFE8D6 10px, #F8F4E8 10px, #F8F4E8 20px);
+      background-size: 200% 100%;
+      animation: roadMove 1.2s linear infinite;
+    }
+    .dark .progress-track { background: repeating-linear-gradient(45deg, #2A3222, #2A3222 10px, #353C28 10px, #353C28 20px); }
+    @keyframes roadMove { to { background-position: -40px 0; } }
+
+    /* Scanner */
+    #qr-reader { border: none !important; }
+    #qr-reader video { border-radius: 22px; object-fit: cover; }
+    #qr-reader__scan_region { border-radius: 22px; overflow: hidden; }
+    #qr-reader__dashboard_section_csr button {
+      background: var(--olive) !important; color:#fff !important;
+      border-radius: 999px !important; padding: 8px 18px !important;
+      font-weight: 600 !important; border: none !important;
+    }
+    #qr-reader__dashboard_section_csr select { border-radius: 12px !important; padding: 6px 10px !important; }
+
+    .scan-frame::before, .scan-frame::after,
+    .scan-frame > .corner::before, .scan-frame > .corner::after {
+      content:''; position:absolute; width:32px; height:32px;
+      border: 4px solid #7C8C5A; border-radius: 6px;
+    }
+    .scan-frame::before { top:14px; left:14px; border-right:none; border-bottom:none; }
+    .scan-frame::after  { top:14px; right:14px; border-left:none; border-bottom:none; }
+    .scan-frame > .corner::before { bottom:14px; left:14px; border-right:none; border-top:none; }
+    .scan-frame > .corner::after  { bottom:14px; right:14px; border-left:none; border-top:none; }
+
+    .scan-line {
+      position: absolute; left:8%; right:8%; height: 3px;
+      background: linear-gradient(90deg, transparent, #7C8C5A, transparent);
+      box-shadow: 0 0 14px #7C8C5A;
+      animation: scanMove 2.2s ease-in-out infinite;
+    }
+    @keyframes scanMove {
+      0%,100% { top: 12%; opacity:.9; }
+      50%     { top: 86%; opacity:.9; }
+    }
+
+    /* Flash */
+    .flash-ok  { animation: flashOk .7s ease both; }
+    .flash-err { animation: flashErr .7s ease both; }
+    @keyframes flashOk  { 0%{box-shadow:0 0 0 0 rgba(124,140,90,.7)} 100%{box-shadow:0 0 0 22px rgba(124,140,90,0)} }
+    @keyframes flashErr { 0%{box-shadow:0 0 0 0 rgba(238,167,167,.75)} 100%{box-shadow:0 0 0 22px rgba(238,167,167,0)} }
+
+    /* QR sticker */
+    .qr-sticker {
+      background: #fff; border-radius: 16px; padding: 10px;
+      border: 1px dashed #C8D0B5;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .qr-sticker img, .qr-sticker canvas { display:block; margin: 0 auto; }
+
+    /* Print */
+    @media print {
+      body * { visibility: hidden !important; }
+      #printArea, #printArea * { visibility: visible !important; }
+      #printArea {
+        position: absolute; left:0; top:0; width:100%;
+        padding: 8mm; background:#fff;
+      }
+      .no-print { display:none !important; }
+      .qr-sticker { border:1px dashed #999; }
+    }
+
+    /* Toast */
+    #toastBox { pointer-events: none; }
+    .toast {
+      pointer-events: auto;
+      animation: toastIn .35s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    .toast.out { animation: toastOut .3s ease both; }
+    @keyframes toastIn { from{opacity:0;transform:translateY(-14px) scale(.96)} to{opacity:1;transform:none} }
+    @keyframes toastOut { to{opacity:0;transform:translateY(-14px) scale(.96)} }
+  </style>
 </head>
-<body class="overflow-hidden flex h-screen text-gray-800">
 
-    <!-- 🌟 URL ของ Google Apps Script 🌟 -->
-    <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwNtPvw2ruDo4-VULAto-7L3puz7fvfeXQhTJZuUvPll7iVMd-9UBn6q_-tryZcXXEl/exec"; // ใส่ URL ของคุณตรงนี้
-    </script>
+<body class="bg-app-light dark:bg-app-light text-olive-800 dark:text-cream-100 min-h-screen antialiased">
 
-    <!-- Loading -->
-    <div id="loading-overlay" class="hidden-load">
-        <i data-lucide="loader-2" class="w-12 h-12 text-pink-500 animate-spin mb-4"></i>
-        <h3 class="text-lg font-bold text-gray-700" id="loading-text">กำลังโหลดข้อมูล...</h3>
-    </div>
+  <!-- ================= TOAST BOX ================= -->
+  <div id="toastBox" class="fixed top-3 left-1/2 -translate-x-1/2 z-[80] w-[min(94vw,420px)] space-y-2"></div>
 
-    <!-- Sidebar & Header (Mobile Overlay) -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden lg:hidden" onclick="toggleMobileSidebar()"></div>
-
-    <aside id="sidebar" class="sidebar bg-white w-64 h-full shadow-xl flex flex-col fixed lg:relative z-30 transform -translate-x-full lg:translate-x-0">
-        <div class="h-16 flex items-center justify-center border-b px-4 mt-4 mb-4">
-            <div class="sidebar-text text-center">
-                <h1 class="font-bold text-primary leading-tight text-sm">อบต.พลับพลาไชย</h1>
-                <p class="text-xs text-gray-500">โครงการเยี่ยมเตาะแตะ</p>
-            </div>
+  <!-- ================= HEADER ================= -->
+  <header class="sticky top-0 z-40">
+    <div class="glass-card border-b border-olive-100/70 dark:border-night-700/70">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-olive-400 to-olive-600 flex items-center justify-center text-xl shadow-soft">
+          🪖
         </div>
-        <nav class="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
-            <button onclick="switchView('dashboard')" id="nav-dashboard" class="w-full flex items-center px-3 py-2.5 rounded-lg text-gray-600 hover:bg-pink-50 hover:text-primary transition-colors">
-                <i data-lucide="layout-dashboard" class="w-5 h-5 flex-shrink-0"></i><span class="ml-3 sidebar-text font-medium">Dashboard</span>
-            </button>
-            <button onclick="switchView('form')" id="nav-form" class="w-full flex items-center px-3 py-2.5 rounded-lg text-gray-600 hover:bg-pink-50 hover:text-primary transition-colors">
-                <i data-lucide="clipboard-plus" class="w-5 h-5 flex-shrink-0"></i><span class="ml-3 sidebar-text font-medium">แบบตรวจเยี่ยมทารก</span>
-            </button>
-            <button onclick="switchView('data')" id="nav-data" class="w-full flex items-center px-3 py-2.5 rounded-lg text-gray-600 hover:bg-pink-50 hover:text-primary transition-colors">
-                <i data-lucide="database" class="w-5 h-5 flex-shrink-0"></i><span class="ml-3 sidebar-text font-medium">ข้อมูลเยี่ยมบ้าน</span>
-            </button>
-        </nav>
-        <div class="p-4 border-t hidden lg:flex">
-            <button onclick="toggleSidebar()" class="w-full flex items-center justify-center p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition">
-                <i data-lucide="chevrons-left" id="toggle-icon" class="w-5 h-5"></i>
-            </button>
+        <div class="flex-1 min-w-0">
+          <h1 id="hdrTitle" class="text-[15px] font-bold leading-tight truncate">ระบบหมวกนิรภัยเด็กอนุบาล</h1>
+          <p id="hdrSub" class="text-[11px] text-olive-500 dark:text-olive-300 truncate">พร้อมใช้งาน</p>
         </div>
-    </aside>
-
-    <div class="flex-1 flex flex-col h-full overflow-hidden">
-        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-4 lg:px-6 z-10 relative">
-            <div class="flex items-center">
-                <button onclick="toggleMobileSidebar()" class="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none mr-2">
-                    <i data-lucide="menu" class="w-6 h-6"></i>
-                </button>
-                <h2 id="header-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
-            </div>
-            <div class="flex items-center space-x-3">
-                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-1 rounded border border-blue-200 hidden sm:inline-block">เจ้าหน้าที่สาธารณสุข</span>
-                <div class="w-8 h-8 rounded-full bg-pink-200 flex items-center justify-center text-pink-700 font-bold">จน</div>
-            </div>
-        </header>
-
-        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 lg:p-6">
-            
-            <!-- 🌟 VIEW: DASHBOARD 🌟 -->
-            <div id="view-dashboard" class="view-section active">
-                
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 bg-white p-4 md:p-6 rounded-xl shadow-sm border-l-4 border-pink-500">
-                    <div>
-                        <h2 class="text-lg md:text-2xl font-bold text-gray-800">องค์การบริหารส่วนตำบลพลับพลาไชย</h2>
-                        <p class="text-sm md:text-base text-gray-500 mt-1">ระบบจัดการข้อมูลโครงการ <span class="text-pink-600 font-semibold">"เต่งตึงเยี่ยมเตาะแตะ"</span></p>
-                    </div>
-                </div>
-
-                <!-- 🌟 ตัวกรองข้อมูล (Filters) สำหรับ 14 หมู่บ้าน 🌟 -->
-                <div class="bg-white p-4 rounded-xl shadow-sm mb-6">
-                    <h3 class="text-sm font-bold text-gray-700 mb-3 flex items-center"><i data-lucide="filter" class="w-4 h-4 mr-2"></i> ตัวกรองข้อมูลสถิติและแผนที่</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">หมู่บ้าน</label>
-                            <select id="filterMoo" class="form-input text-sm" onchange="applyFilters()">
-                                <option value="all">-- ทุกหมู่บ้าน --</option>
-                                <option value="หมู่ 1">หมู่ 1</option>
-                                <option value="หมู่ 2">หมู่ 2</option>
-                                <option value="หมู่ 3">หมู่ 3</option>
-                                <option value="หมู่ 4">หมู่ 4</option>
-                                <option value="หมู่ 5">หมู่ 5</option>
-                                <option value="หมู่ 6">หมู่ 6</option>
-                                <option value="หมู่ 7">หมู่ 7</option>
-                                <option value="หมู่ 8">หมู่ 8</option>
-                                <option value="หมู่ 9">หมู่ 9</option>
-                                <option value="หมู่ 10">หมู่ 10</option>
-                                <option value="หมู่ 11">หมู่ 11</option>
-                                <option value="หมู่ 12">หมู่ 12</option>
-                                <option value="หมู่ 13">หมู่ 13</option>
-                                <option value="หมู่ 14">หมู่ 14</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">เพศ</label>
-                            <select id="filterGender" class="form-input text-sm" onchange="applyFilters()">
-                                <option value="all">-- ทุกเพศ --</option>
-                                <option value="ชาย">ชาย</option>
-                                <option value="หญิง">หญิง</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">สถานะของขวัญ</label>
-                            <select id="filterGift" class="form-input text-sm" onchange="applyFilters()">
-                                <option value="all">-- ทั้งหมด --</option>
-                                <option value="มอบแล้ว">มอบแล้ว / เคยรับแล้ว</option>
-                                <option value="ยังไม่ได้มอบ">ยังไม่ได้มอบ</option>
-                            </select>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button onclick="resetFilters()" class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium transition">
-                                ล้างค่า
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 🌟 สถิติ 4 กล่อง 🌟 -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-pink-500 flex items-center">
-                        <div class="bg-pink-100 p-3 rounded-lg text-pink-600 mr-4"><i data-lucide="baby" class="w-6 h-6"></i></div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">เด็กแรกเกิด (ตามตัวกรอง)</p>
-                            <h3 class="text-2xl font-bold text-gray-800" id="stat-total">0 <span class="text-sm font-normal text-gray-500">คน</span></h3>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-blue-500 flex items-center">
-                        <div class="bg-blue-100 p-3 rounded-lg text-blue-600 mr-4"><i data-lucide="home" class="w-6 h-6"></i></div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">เยี่ยมบ้านแล้ว</p>
-                            <h3 class="text-2xl font-bold text-gray-800" id="stat-visited">0 <span class="text-sm font-normal text-gray-500">ครั้ง</span></h3>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-yellow-500 flex items-center">
-                        <div class="bg-yellow-100 p-3 rounded-lg text-yellow-600 mr-4"><i data-lucide="stethoscope" class="w-6 h-6"></i></div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">สุขภาพต้องติดตาม</p>
-                            <h3 class="text-2xl font-bold text-gray-800" id="stat-care">0 <span class="text-sm font-normal text-gray-500">ราย</span></h3>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-green-500 flex items-center">
-                        <div class="bg-green-100 p-3 rounded-lg text-green-600 mr-4"><i data-lucide="gift" class="w-6 h-6"></i></div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">มอบของขวัญแล้ว</p>
-                            <h3 class="text-2xl font-bold text-gray-800" id="stat-gift">0 <span class="text-sm font-normal text-gray-500">ชุด</span></h3>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 🌟 แผนที่พิกัดบ้าน (Map) 🌟 -->
-                <div class="bg-white rounded-xl shadow-sm p-5 mb-6 relative z-0">
-                    <h3 class="font-bold text-gray-700 mb-4 flex items-center justify-center"><i data-lucide="map" class="w-5 h-5 mr-2 text-blue-500"></i> แผนที่พิกัดบ้านเด็กทารก</h3>
-                    <div id="map" class="h-96 w-full rounded-lg border border-gray-200 shadow-inner bg-gray-100"></div>
-                </div>
-
-                <!-- 🌟 กราฟ (Charts) 🌟 -->
-                <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
-                    <h3 class="font-bold text-gray-700 mb-4 text-center">แนวโน้มการเกิด (รายเดือน / ปี)</h3>
-                    <div class="relative h-72 w-full"><canvas id="lineChart"></canvas></div>
-                </div>
-                
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div class="bg-white rounded-xl shadow-sm p-5">
-                        <h3 class="font-bold text-gray-700 mb-4 text-center">สถิติเด็กแรกเกิดจำแนกตามหมู่บ้าน</h3>
-                        <div class="relative h-64 w-full"><canvas id="barChart"></canvas></div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-sm p-5">
-                        <h3 class="font-bold text-gray-700 mb-4 text-center">สัดส่วนเพศ</h3>
-                        <div class="relative h-64 w-full flex justify-center"><canvas id="pieChart"></canvas></div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-white rounded-xl shadow-sm p-5">
-                        <h3 class="font-bold text-gray-700 mb-4 text-center">สถิติการดื่มนม</h3>
-                        <div class="relative h-64 w-full flex justify-center"><canvas id="feedingChart"></canvas></div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-sm p-5">
-                        <h3 class="font-bold text-gray-700 mb-4 text-center">ภาพรวมสุขภาพเบื้องต้น</h3>
-                        <div class="relative h-64 w-full flex justify-center"><canvas id="healthChart"></canvas></div>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- VIEW: FORM -->
-            <div id="view-form" class="view-section">
-                <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div class="bg-gradient-to-r from-pink-500 to-pink-400 px-6 py-4">
-                        <h2 class="text-white text-xl font-bold flex items-center"><i data-lucide="clipboard-list" class="w-6 h-6 mr-2"></i> แบบฟอร์มบันทึกการตรวจเยี่ยม</h2>
-                    </div>
-                    <div class="p-6">
-                        <form id="visitForm" onsubmit="submitForm(event)" class="space-y-6">
-                            <!-- ทั่วไป -->
-                            <div>
-                                <h3 class="text-lg font-semibold border-b pb-2 mb-4 text-pink-600">ส่วนที่ 1: ข้อมูลทั่วไป</h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">วันที่เยี่ยมบ้าน *</label><input type="date" name="visitDate" required class="form-input"></div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">หมู่ที่ *</label>
-                                        <select name="villageMoo" required class="form-input bg-white">
-                                            <option value="">-- เลือกหมู่บ้าน --</option>
-                                            <option value="1">หมู่ 1</option><option value="2">หมู่ 2</option>
-                                            <option value="3">หมู่ 3</option><option value="4">หมู่ 4</option>
-                                            <option value="5">หมู่ 5</option><option value="6">หมู่ 6</option>
-                                            <option value="7">หมู่ 7</option><option value="8">หมู่ 8</option>
-                                            <option value="9">หมู่ 9</option><option value="10">หมู่ 10</option>
-                                            <option value="11">หมู่ 11</option><option value="12">หมู่ 12</option>
-                                            <option value="13">หมู่ 13</option><option value="14">หมู่ 14</option>
-                                        </select>
-                                    </div>
-                                    <div class="md:col-span-2">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล เด็กทารก *</label>
-                                        <input list="childNameList" name="childName" id="childNameInput" required placeholder="เลือกรายชื่อจากระบบ หรือ พิมพ์ชื่อเด็กใหม่เพื่อเพิ่มข้อมูล..." class="form-input bg-white" onchange="autoFillChildData()">
-                                        <datalist id="childNameList">
-                                            <option value="กำลังโหลดรายชื่อ..."></option>
-                                        </datalist>
-                                        <p class="text-xs text-pink-500 mt-1">* เลือกลิสต์เพื่อดึงประวัติการเยี่ยมล่าสุด หรือ พิมพ์ชื่อใหม่เพื่อเพิ่มเด็กลงระบบ</p>
-                                    </div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">เพศ *</label><select name="gender" required class="form-input bg-white"><option value="">-- ระบุเพศ --</option><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select></div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">วันเกิด *</label><input type="date" name="birthDate" required class="form-input"></div>
-                                </div>
-                            </div>
-                            <!-- สุขภาพ -->
-                            <div>
-                                <h3 class="text-lg font-semibold border-b pb-2 mb-4 text-pink-600 mt-6">ส่วนที่ 2: ข้อมูลสุขภาพ</h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">น้ำหนัก (กิโลกรัม) *</label><input type="number" step="0.01" name="weight" required class="form-input"></div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ส่วนสูง (ซม.) *</label><input type="number" step="0.1" name="height" required class="form-input"></div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">การดื่มนม *</label><select name="feedingType" required class="form-input bg-white"><option value="">-- เลือก --</option><option value="นมแม่">นมแม่</option><option value="นมชง">นมชง</option><option value="นมแม่+นมชง">นมแม่+นมชง</option></select></div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">การคลอด *</label><select name="deliveryMethod" required class="form-input bg-white"><option value="">-- เลือก --</option><option value="คลอดเอง">คลอดเอง</option><option value="ผ่าคลอด">ผ่าคลอด</option></select></div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">การขับถ่าย *</label><select name="excretion" required class="form-input bg-white"><option value="">-- เลือก --</option><option value="ปกติ">ปกติ</option><option value="ผิดปกติ">ผิดปกติ</option></select></div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ประวัติวัคซีน *</label><select name="vaccine" required class="form-input bg-white"><option value="">-- เลือก --</option><option value="ครบตามกำหนด">ครบตามกำหนด</option><option value="ไม่ครบตามกำหนด">ไม่ครบตามกำหนด</option></select></div>
-                                    <div class="md:col-span-2">
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">ประเมินสุขภาพเบื้องต้น</label>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-gray-50 p-3 rounded-lg border">
-                                            <label class="flex items-center space-x-2"><input type="checkbox" name="healthStatus" value="แข็งแรงดี" class="rounded text-pink-500"> <span class="text-sm">สุขภาพแข็งแรง พัฒนาการสมวัย</span></label>
-                                            <label class="flex items-center space-x-2"><input type="checkbox" name="healthStatus" value="ตัวเหลือง" class="rounded text-pink-500"> <span class="text-sm">มีภาวะตัวเหลือง (ต้องติดตาม)</span></label>
-                                            <label class="flex items-center space-x-2"><input type="checkbox" name="healthStatus" value="สะดืออักเสบ" class="rounded text-pink-500"> <span class="text-sm">สายสะดือมีอาการอักเสบ/แฉะ</span></label>
-                                            <label class="flex items-center space-x-2"><input type="checkbox" name="healthStatus" value="ดื่มนมได้น้อย" class="rounded text-pink-500"> <span class="text-sm">ทารกดูดนมไม่เก่ง</span></label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- ครอบครัว -->
-                            <div>
-                                <h3 class="text-lg font-semibold border-b pb-2 mb-4 text-pink-600 mt-6">ส่วนที่ 3: ข้อมูลครอบครัว</h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้เลี้ยงดูหลัก *</label><input type="text" name="parentName" required class="form-input"></div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label><input type="tel" name="phone" class="form-input"></div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">การคุมกำเนิด (มารดา)</label><input type="text" name="birthControl" class="form-input"></div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">การมอบชุดรับขวัญ</label><select name="giftGiven" class="form-input bg-white"><option value="มอบแล้ว">มอบแล้ว</option><option value="ยังไม่ได้มอบ">ยังไม่ได้มอบ</option><option value="เคยรับแล้ว">เคยรับแล้ว</option></select></div>
-                                    <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">คำแนะนำที่ให้ / หมายเหตุ</label><textarea name="notes" rows="2" class="form-input resize-none"></textarea></div>
-                                </div>
-                            </div>
-                            <!-- พิกัด & รูป -->
-                            <div>
-                                <h3 class="text-lg font-semibold border-b pb-2 mb-4 text-pink-600 mt-6 flex items-center"><i data-lucide="map-pin" class="w-5 h-5 mr-2"></i> พิกัดและรูปภาพ</h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div class="md:col-span-2">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">พิกัดสถานที่ (ละติจูด, ลองจิจูด)</label>
-                                        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                                            <input type="text" id="gpsInput" name="gpsLocation" readonly placeholder="กดปุ่มเพื่อดึงพิกัด..." class="form-input bg-gray-50 text-sm flex-1">
-                                            <button type="button" onclick="getLocation()" class="px-4 py-2 bg-blue-100 text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-200 flex items-center justify-center font-medium whitespace-nowrap transition">
-                                                <i data-lucide="map" class="w-4 h-4 mr-2"></i> ดึงพิกัดปัจจุบัน
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">แนบรูปถ่ายเด็กทารก</label><input type="file" id="childPhoto" accept="image/*" class="w-full text-sm text-gray-500 border border-gray-200 rounded-lg p-1"></div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">แนบรูปถ่ายสภาพบ้าน/ครอบครัว</label><input type="file" id="housePhoto" accept="image/*" class="w-full text-sm text-gray-500 border border-gray-200 rounded-lg p-1"></div>
-                                </div>
-                            </div>
-                            <div class="pt-6 flex justify-end space-x-3 border-t">
-                                <button type="button" onclick="document.getElementById('visitForm').reset(); document.getElementById('gpsInput').value='';" class="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">ล้างฟอร์ม</button>
-                                <button id="submitBtn" type="submit" class="px-6 py-2.5 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-medium flex items-center shadow-md"><i data-lucide="save" class="w-5 h-5 mr-2"></i> บันทึกข้อมูล</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW: DATA -->
-            <div id="view-data" class="view-section">
-                <div class="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
-                    <div class="px-6 py-4 border-b flex justify-between items-center bg-blue-50">
-                        <h2 class="text-lg font-bold text-blue-800 flex items-center"><i data-lucide="table-properties" class="w-5 h-5 mr-2"></i>ตารางข้อมูล</h2>
-                        <button onclick="fetchSheetData()" class="px-4 py-2 bg-white border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-100 flex items-center text-sm font-medium"><i data-lucide="refresh-cw" class="w-4 h-4 mr-2" id="refresh-icon"></i> รีเฟรช</button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse whitespace-nowrap">
-                            <thead>
-                                <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
-                                    <th class="p-4 border-b">วันที่เยี่ยม</th><th class="p-4 border-b">ชื่อทารก</th><th class="p-4 border-b">หมู่</th>
-                                    <th class="p-4 border-b">สุขภาพ</th><th class="p-4 border-b">สื่อ</th><th class="p-4 border-b text-center">ของขวัญ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dataTableBody" class="text-sm divide-y divide-gray-100">
-                                <tr><td colspan="6" class="text-center p-8 text-gray-500">รอโหลดข้อมูล...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="p-4 border-t text-sm text-gray-500"><span id="table-count-label">แสดงข้อมูล 0 รายการ</span></div>
-                </div>
-            </div>
-
-        </main>
+        <button id="btnTgQuick" title="ส่งสรุป Telegram"
+          class="w-10 h-10 rounded-full bg-white/70 dark:bg-night-700/70 border border-olive-100 dark:border-night-600 flex items-center justify-center text-lg hover:scale-105 active:scale-95 transition">
+          📨
+        </button>
+        <button id="btnTheme" title="โหมดกลางคืน"
+          class="w-10 h-10 rounded-full bg-white/70 dark:bg-night-700/70 border border-olive-100 dark:border-night-600 flex items-center justify-center text-lg hover:scale-105 active:scale-95 transition">
+          <span id="themeIcon">🌙</span>
+        </button>
+      </div>
     </div>
+  </header>
 
-    <!-- Script Logic -->
-    <script>
-        lucide.createIcons();
-        
-        // Data Arrays
-        let appData = [];        // ข้อมูลดิบทั้งหมดจาก Backend
-        let filteredData = [];   // ข้อมูลที่ผ่านการกรองแล้ว (นำไปใช้วาดกราฟ/แผนที่/ตาราง)
-        let childMasterList = [];
+  <!-- ================= MAIN ================= -->
+  <main class="max-w-6xl mx-auto px-3 sm:px-4 pt-4 pb-32">
 
-        // Charts & Map instances
-        let barChartInst=null, pieChartInst=null, lineChartInst=null, feedingChartInst=null, healthChartInst=null;
-        let map=null, markersGroup=null;
+    <!-- ============ PAGE: SCAN ============ -->
+    <section id="page-scan" class="page active">
 
-        // --- Sidebar & Views ---
-        const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebar-overlay');
-        let isCollapsed = false;
-        function toggleSidebar() {
-            isCollapsed = !isCollapsed;
-            document.querySelectorAll('.sidebar-text').forEach(t => isCollapsed ? t.classList.add('hidden') : setTimeout(()=>t.classList.remove('hidden'),150));
-            sidebar.classList.toggle('w-64'); sidebar.classList.toggle('w-20');
-            document.getElementById('toggle-icon').setAttribute('data-lucide', isCollapsed ? 'chevrons-right' : 'chevrons-left');
-            lucide.createIcons();
-        }
-        function toggleMobileSidebar() { sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
-        
-        const views = ['dashboard', 'form', 'data'];
-        function switchView(targetView) {
-            views.forEach(v => {
-                document.getElementById(`view-${v}`).classList.remove('active');
-                document.getElementById(`nav-${v}`).classList.remove('bg-pink-100', 'text-primary', 'font-semibold');
-                document.getElementById(`nav-${v}`).classList.add('text-gray-600');
-            });
-            document.getElementById(`view-${targetView}`).classList.add('active');
-            document.getElementById(`nav-${targetView}`).classList.add('bg-pink-100', 'text-primary', 'font-semibold');
-            document.getElementById('header-title').innerText = { 'dashboard':'Dashboard', 'form':'บันทึกข้อมูล', 'data':'ฐานข้อมูล' }[targetView];
-            if(window.innerWidth < 1024) { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); }
-            
-            // รีเฟรชแผนที่เมื่อสลับมาหน้า Dashboard (แก้บัคแผนที่เทา)
-            if(targetView === 'dashboard' && map) setTimeout(() => map.invalidateSize(), 100);
-        }
+      <!-- Mini stats -->
+      <div class="grid grid-cols-3 gap-2.5 mb-3">
+        <div class="glass-card rounded-2xl p-3 text-center border border-olive-100/70 dark:border-night-700/70 shadow-soft">
+          <div class="text-[11px] text-olive-500 dark:text-olive-300 font-medium">ทั้งหมด</div>
+          <div id="miniTotal" class="text-2xl font-bold text-olive-700 dark:text-cream-100">–</div>
+        </div>
+        <div class="glass-card rounded-2xl p-3 text-center border border-olive-100/70 dark:border-night-700/70 shadow-soft">
+          <div class="text-[11px] text-olive-500 dark:text-olive-300 font-medium">สแกนแล้ว</div>
+          <div id="miniScanned" class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">–</div>
+        </div>
+        <div class="glass-card rounded-2xl p-3 text-center border border-olive-100/70 dark:border-night-700/70 shadow-soft">
+          <div class="text-[11px] text-olive-500 dark:text-olive-300 font-medium">คงเหลือ</div>
+          <div id="miniLeft" class="text-2xl font-bold text-rose-500">–</div>
+        </div>
+      </div>
 
-        // ==========================================
-        // 🌟 Map Initialization & Logic (Leaflet)
-        // ==========================================
-        function initMap() {
-            if(!map) {
-                // ตั้งพิกัดเริ่มต้นไปที่พื้นที่ใกล้เคียง (ตัวอย่าง อบต.พลับพลาไชย)
-                map = L.map('map').setView([14.8, 99.8], 11); 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap contributors'
-                }).addTo(map);
-                markersGroup = L.layerGroup().addTo(map);
-            }
-        }
+      <!-- Scanner card -->
+      <div class="glass-card rounded-3xl p-4 border border-olive-100/70 dark:border-night-700/70 shadow-soft">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-sm font-semibold">สแกน QR Code</span>
+          </div>
+          <span id="scannerBadge" class="text-[11px] px-2.5 py-1 rounded-full bg-olive-100 dark:bg-night-700 text-olive-600 dark:text-olive-200 font-medium">พร้อม</span>
+        </div>
 
-        function updateMap() {
-            if(!map) initMap();
-            markersGroup.clearLayers();
-            
-            let bounds = [];
-            filteredData.forEach(row => {
-                let gps = row['พิกัดบ้าน'];
-                if(gps && typeof gps === 'string' && gps.includes(',')) {
-                    let coords = gps.split(',');
-                    let lat = parseFloat(coords[0].trim());
-                    let lng = parseFloat(coords[1].trim());
-                    
-                    if(!isNaN(lat) && !isNaN(lng)) {
-                        let health = row['สุขภาพเบื้องต้น'] || '-';
-                        // กำหนดสีของข้อความสุขภาพ
-                        let healthColor = health.includes('แข็งแรง') ? 'text-green-600' : 'text-orange-600';
-                        
-                        // 🌟 สร้าง HTML สำหรับการ์ดข้อมูลแบบละเอียดพร้อมรูปภาพ 🌟
-                        let popupHTML = `
-                            <div class="font-sans" style="min-width: 260px;">
-                                <!-- หัวการ์ด -->
-                                <div class="border-b border-gray-200 pb-2 mb-2">
-                                    <h4 class="font-bold text-pink-600 text-base m-0 leading-tight">${row['ชื่อ-สกุลเด็ก'] || '-'}</h4>
-                                    <span class="text-xs text-gray-500">${row['หมู่บ้าน'] || '-'}</span>
-                                </div>
-                                
-                                <!-- ส่วนแสดงรูปภาพ (แสดงเมื่อมีลิงก์) -->
-                                <div class="flex gap-2 mb-3">
-                                    ${row['รูปลิงก์(เด็ก)'] ? `<div class="flex-1 text-center"><img src="${row['รูปลิงก์(เด็ก)']}" class="w-full h-24 object-cover rounded shadow-sm border border-gray-100 cursor-pointer hover:opacity-80 transition" onclick="window.open('${row['รูปลิงก์(เด็ก)']}')" title="คลิกเพื่อดูรูปเต็ม" alt="เด็ก"><span class="text-[10px] text-gray-400">👶 ทารก</span></div>` : ''}
-                                    ${row['รูปลิงก์(บ้าน)'] ? `<div class="flex-1 text-center"><img src="${row['รูปลิงก์(บ้าน)']}" class="w-full h-24 object-cover rounded shadow-sm border border-gray-100 cursor-pointer hover:opacity-80 transition" onclick="window.open('${row['รูปลิงก์(บ้าน)']}')" title="คลิกเพื่อดูรูปเต็ม" alt="บ้าน"><span class="text-[10px] text-gray-400">🏠 ที่พัก</span></div>` : ''}
-                                </div>
+        <!-- Camera area -->
+        <div id="camWrap" class="relative rounded-3xl overflow-hidden bg-night-900/90 dark:bg-black" style="min-height:280px">
+          <div id="qr-reader" class="w-full"></div>
 
-                                <!-- ข้อมูลเชิงลึก -->
-                                <div class="grid grid-cols-2 gap-1 text-xs text-gray-700 mb-2">
-                                    <div><span class="text-gray-400">เพศ:</span> ${row['เพศ'] || '-'}</div>
-                                    <div><span class="text-gray-400">วัคซีน:</span> ${row['ประวัติวัคซีน'] || '-'}</div>
-                                    <div><span class="text-gray-400">น.น.:</span> ${row['น้ำหนัก(กก.)'] || '-'} กก.</div>
-                                    <div><span class="text-gray-400">ส.ส.:</span> ${row['ส่วนสูง(ซม.)'] || '-'} ซม.</div>
-                                    <div class="col-span-2"><span class="text-gray-400">นม:</span> ${row['การดื่มนม'] || '-'}</div>
-                                </div>
+          <div id="scanOverlay" class="scan-frame absolute inset-0 pointer-events-none">
+            <div class="corner"></div>
+            <div class="scan-line"></div>
+          </div>
 
-                                <!-- สุขภาพและผู้ดูแล -->
-                                <div class="bg-gray-50 p-2 rounded border border-gray-100 text-xs mb-2">
-                                    <div class="mb-1"><span class="text-gray-500">สุขภาพ:</span> <span class="font-semibold ${healthColor}">${health}</span></div>
-                                    <div><span class="text-gray-500">ผู้ดูแล:</span> ${row['ชื่อผู้ปกครอง'] || '-'} ${row['เบอร์โทร'] ? `(${row['เบอร์โทร']})` : ''}</div>
-                                </div>
-                                
-                                <!-- คำแนะนำ (ถ้ามี) -->
-                                ${row['คำแนะนำ/หมายเหตุ'] ? `<div class="text-[11px] text-gray-500 italic bg-pink-50 p-1.5 rounded border border-pink-100" title="${row['คำแนะนำ/หมายเหตุ']}">${row['คำแนะนำ/หมายเหตุ']}</div>` : ''}
-                            </div>
-                        `;
-                        
-                        // ตั้งค่า Popup ให้กว้างขึ้นเพื่อรองรับรูปภาพ
-                        let marker = L.marker([lat, lng]).bindPopup(popupHTML, { maxWidth: 320, minWidth: 280 });
-                        markersGroup.addLayer(marker);
-                        bounds.push([lat, lng]);
-                    }
-                }
-            });
+          <!-- Idle UI with fallback -->
+          <div id="camIdle" class="absolute inset-0 flex flex-col items-center justify-center text-cream-100 text-center px-6">
+            <div class="text-5xl mb-3">📷</div>
+            <p class="font-semibold mb-1">เปิดกล้องไม่ทำงาน?</p>
+            <p class="text-xs opacity-70 mb-3">ลองวิธีเหล่านี้</p>
+            <div class="flex flex-col gap-2 w-full max-w-xs">
+              <button id="btnRetryCam"
+                class="px-4 py-2.5 rounded-full bg-white/20 hover:bg-white/30 text-cream-100 text-xs font-semibold transition">
+                🔄 ลองอีกครั้ง
+              </button>
+              <button id="btnOpenDirect"
+                class="px-4 py-2.5 rounded-full bg-white/20 hover:bg-white/30 text-cream-100 text-xs font-semibold transition">
+                🚀 เปิดในแท็บใหม่
+              </button>
+            </div>
+            <p class="text-[10px] opacity-60 mt-3">หรือใช้ช่องกรอกรหัสด้านล่าง</p>
+          </div>
+        </div>
 
-            // ปรับระดับการซูมให้พอดีกับหมุดพิกัดทั้งหมด
-            if(bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [30, 30] });
-            } else {
-                map.setView([14.8, 99.8], 11); // พิกัดเริ่มต้น
-            }
-        }
+        <!-- Scanner controls -->
+        <div class="grid grid-cols-2 gap-2.5 mt-3">
+          <button id="btnStartCam"
+            class="col-span-2 py-3.5 rounded-2xl bg-gradient-to-r from-olive-500 to-olive-600 text-white font-semibold shadow-soft hover:shadow-lg active:scale-[.98] transition flex items-center justify-center gap-2">
+            <span id="camBtnIcon">▶️</span>
+            <span id="camBtnText">เปิดกล้องสแกน</span>
+          </button>
+        </div>
 
-        function getLocation() {
-            const gpsInput = document.getElementById('gpsInput');
-            gpsInput.value = "กำลังค้นหาพิกัด...";
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    pos => gpsInput.value = `${pos.coords.latitude}, ${pos.coords.longitude}`,
-                    err => { alert('ไม่สามารถดึงพิกัดได้ โปรดเปิด GPS/Location ในอุปกรณ์ของคุณ'); gpsInput.value = ""; },
-                    { enableHighAccuracy: true }
-                );
-            } else { alert("เบราว์เซอร์ไม่รองรับระบบ GPS"); gpsInput.value = ""; }
-        }
+        <!-- Manual fallback -->
+        <div class="mt-4 pt-4 border-t border-olive-100 dark:border-night-700">
+          <p class="text-xs text-olive-500 dark:text-olive-300 mb-2 flex items-center gap-1.5">
+            <span>⌨️</span> สำรอง: กรอกรหัสนักเรียน (กรณีกล้องใช้ไม่ได้)
+          </p>
+          <div class="flex gap-2">
+            <input id="manualId" type="text" inputmode="text" autocomplete="off" placeholder="เช่น K1001"
+              class="flex-1 px-4 py-3 rounded-2xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none focus:ring-2 focus:ring-olive-400/50 text-base font-medium">
+            <button id="btnManual"
+              class="px-5 py-3 rounded-2xl bg-olive-100 dark:bg-night-700 text-olive-700 dark:text-olive-100 font-semibold hover:bg-olive-200 dark:hover:bg-night-600 active:scale-95 transition">
+              บันทึก
+            </button>
+          </div>
+        </div>
 
-        // ==========================================
-        // 🌟 Data Fetch & Filtering Logic
-        // ==========================================
-        async function fetchSheetData() {
-            if(!GAS_URL) { document.getElementById('loading-overlay').classList.add('hidden-load'); return; }
-            document.getElementById('loading-overlay').classList.remove('hidden-load');
-            try {
-                const res = await fetch(GAS_URL);
-                const json = await res.json();
-                if(json.status === 'success') {
-                    appData = json.data; childMasterList = json.childList || [];
-                    populateChildDropdown();
-                    applyFilters(); // กรองข้อมูลเริ่มต้น และอัปเดต Dashboard
-                }
-            } catch (err) { console.error('Fetch Error:', err); } 
-            finally { document.getElementById('loading-overlay').classList.add('hidden-load'); }
-        }
+        <!-- Scanner name -->
+        <div class="mt-3 flex items-center gap-2">
+          <span class="text-xs text-olive-500 dark:text-olive-300 whitespace-nowrap">👤 ผู้สแกน:</span>
+          <input id="scannerName" type="text"
+            class="flex-1 px-3 py-2 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none focus:ring-2 focus:ring-olive-400/50 text-sm">
+        </div>
+      </div>
 
-        function resetFilters() {
-            document.getElementById('filterMoo').value = 'all';
-            document.getElementById('filterGender').value = 'all';
-            document.getElementById('filterGift').value = 'all';
-            applyFilters();
-        }
+      <!-- Recent scans -->
+      <div class="glass-card rounded-3xl p-4 border border-olive-100/70 dark:border-night-700/70 shadow-soft mt-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-sm flex items-center gap-2">🕐 สแกนล่าสุดวันนี้</h3>
+          <button id="btnRefreshRecent" class="text-[11px] text-olive-500 hover:text-olive-700 dark:text-olive-300">↻ รีเฟรช</button>
+        </div>
+        <div id="recentList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+          <p class="text-center text-sm text-olive-400 py-6">ยังไม่มีการสแกนวันนี้</p>
+        </div>
+      </div>
+    </section>
 
-        function applyFilters() {
-            const fMoo = document.getElementById('filterMoo').value;
-            const fGen = document.getElementById('filterGender').value;
-            const fGift = document.getElementById('filterGift').value;
+    <!-- ============ PAGE: DASHBOARD ============ -->
+    <section id="page-dashboard" class="page">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="text-lg font-bold">แดชบอร์ดภาพรวม</h2>
+          <p id="dashDate" class="text-xs text-olive-500 dark:text-olive-300">–</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnExport" class="px-3 py-2 rounded-xl bg-white/70 dark:bg-night-700 border border-olive-100 dark:border-night-600 text-xs font-semibold hover:scale-105 transition">⬇️ CSV</button>
+          <button id="btnPrint" class="px-3 py-2 rounded-xl bg-white/70 dark:bg-night-700 border border-olive-100 dark:border-night-600 text-xs font-semibold hover:scale-105 transition">🖨️ พิมพ์</button>
+          <button id="btnRefreshDash" class="px-3 py-2 rounded-xl bg-olive-500 text-white text-xs font-semibold hover:scale-105 transition">↻</button>
+        </div>
+      </div>
 
-            // กรองข้อมูลตามเงื่อนไข
-            filteredData = appData.filter(row => {
-                let matchMoo = fMoo === 'all' || (row['หมู่บ้าน'] && row['หมู่บ้าน'].toString().includes(fMoo));
-                let matchGen = fGen === 'all' || (row['เพศ'] && row['เพศ'].toString() === fGen);
-                
-                let giftStat = (row['สถานะของขวัญ'] || '').toString();
-                let matchGift = true;
-                if(fGift === 'มอบแล้ว') matchGift = giftStat.includes('มอบแล้ว') || giftStat.includes('เคยรับ');
-                if(fGift === 'ยังไม่ได้มอบ') matchGift = giftStat.includes('ยังไม่ได้มอบ');
+      <!-- Stat cards (5) -->
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-2.5 mb-4">
+        <div class="rounded-2xl p-3.5 bg-gradient-to-br from-cream-100 to-white dark:from-night-700 dark:to-night-800 border border-olive-100 dark:border-night-600 shadow-soft">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-medium text-olive-500 dark:text-olive-300">ทั้งหมด</span>
+            <span class="text-lg">👧</span>
+          </div>
+          <div id="statTotal" class="text-3xl font-bold mt-1">–</div>
+          <div class="text-[10px] text-olive-400 mt-0.5">คน</div>
+        </div>
 
-                return matchMoo && matchGen && matchGift;
-            });
+        <div class="rounded-2xl p-3.5 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/30 dark:to-night-800 border border-emerald-100 dark:border-emerald-900/50 shadow-soft">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-medium text-emerald-600 dark:text-emerald-300">สแกนแล้ว</span>
+            <span class="text-lg">✅</span>
+          </div>
+          <div id="statScanned" class="text-3xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">–</div>
+          <div class="text-[10px] text-emerald-500/80 mt-0.5">คน</div>
+        </div>
 
-            // อัปเดตส่วนต่างๆ ที่อาศัยข้อมูลหลังถูกกรอง
-            updateDashboardStats();
-            updateCharts();
-            updateMap();
-            updateTable();
-        }
+        <div class="rounded-2xl p-3.5 bg-gradient-to-br from-rose-50 to-white dark:from-rose-900/30 dark:to-night-800 border border-rose-100 dark:border-rose-900/50 shadow-soft">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-medium text-rose-500 dark:text-rose-300">ยังไม่สแกน</span>
+            <span class="text-lg">❌</span>
+          </div>
+          <div id="statAbsent" class="text-3xl font-bold mt-1 text-rose-500 dark:text-rose-400">–</div>
+          <div class="text-[10px] text-rose-400 mt-0.5">คน</div>
+        </div>
 
-        // ==========================================
-        // 🌟 Update Dashboard Stats & Charts
-        // ==========================================
-        function updateDashboardStats() {
-            let total = filteredData.length, needCare = 0, giftGiven = 0;
-            filteredData.forEach(row => {
-                let h = (row['สุขภาพเบื้องต้น'] || '').toString();
-                if(h && h !== 'แข็งแรงดี' && h !== 'ไม่ได้ระบุ') needCare++;
-                let g = (row['สถานะของขวัญ'] || '').toString();
-                if(g.includes('มอบแล้ว') || g.includes('เคยรับแล้ว')) giftGiven++;
-            });
-            document.getElementById('stat-total').innerHTML = `${total} <span class="text-sm">คน</span>`;
-            document.getElementById('stat-visited').innerHTML = `${total} <span class="text-sm">ครั้ง</span>`;
-            document.getElementById('stat-care').innerHTML = `${needCare} <span class="text-sm">ราย</span>`;
-            document.getElementById('stat-gift').innerHTML = `${giftGiven} <span class="text-sm">ชุด</span>`;
-        }
+        <div class="rounded-2xl p-3.5 bg-gradient-to-br from-pink-50 to-white dark:from-pink-900/20 dark:to-night-800 border border-pink-100 dark:border-pink-900/50 shadow-soft">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-medium text-pink-600 dark:text-pink-300">ลา</span>
+            <span class="text-lg">📝</span>
+          </div>
+          <div id="statOnLeave" class="text-3xl font-bold mt-1 text-pink-600 dark:text-pink-400">–</div>
+          <div class="text-[10px] text-pink-500/80 mt-0.5">คน</div>
+        </div>
 
-        function updateCharts() {
-            // โครงสร้างที่รองรับ 14 หมู่บ้าน
-            const mooCounts = {'หมู่ 1':0, 'หมู่ 2':0, 'หมู่ 3':0, 'หมู่ 4':0, 'หมู่ 5':0, 'หมู่ 6':0, 'หมู่ 7':0, 'หมู่ 8':0, 'หมู่ 9':0, 'หมู่ 10':0, 'หมู่ 11':0, 'หมู่ 12':0, 'หมู่ 13':0, 'หมู่ 14':0};
-            const genderCounts = {'ชาย':0, 'หญิง':0};
-            const feedCounts = {'นมแม่':0, 'นมชง':0, 'นมแม่+นมชง':0};
-            const healthCounts = {'แข็งแรงดี':0, 'ตัวเหลือง':0, 'สะดืออักเสบ':0, 'ดื่มนมได้น้อย':0, 'อื่นๆ':0};
-            const birthTrends = {};
+        <div class="rounded-2xl p-3.5 bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-night-800 border border-amber-100 dark:border-amber-900/50 shadow-soft">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-medium text-amber-600 dark:text-amber-300">มาสาย</span>
+            <span class="text-lg">🕗</span>
+          </div>
+          <div id="statLate" class="text-3xl font-bold mt-1 text-amber-600 dark:text-amber-400">–</div>
+          <div class="text-[10px] text-amber-500/80 mt-0.5">คน</div>
+        </div>
+      </div>
 
-            filteredData.forEach(row => {
-                let moo = row['หมู่บ้าน'] ? row['หมู่บ้าน'].toString().trim() : ''; if(mooCounts[moo] !== undefined) mooCounts[moo]++;
-                let gen = row['เพศ'] ? row['เพศ'].toString().trim() : ''; if(genderCounts[gen] !== undefined) genderCounts[gen]++;
-                
-                let feed = row['การดื่มนม'] ? row['การดื่มนม'].toString().trim() : '';
-                if(feedCounts[feed] !== undefined) feedCounts[feed]++;
+      <!-- Progress -->
+      <div class="glass-card rounded-3xl p-4 border border-olive-100/70 dark:border-night-700/70 shadow-soft mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-sm">🚌 ความคืบหน้าการสแกน</h3>
+          <span id="progPercent" class="text-sm font-bold text-olive-600 dark:text-olive-300">0%</span>
+        </div>
+        <div class="relative">
+          <div class="progress-track h-6 rounded-full overflow-hidden border border-olive-200 dark:border-night-600 relative">
+            <div id="progFill" class="h-full bg-gradient-to-r from-olive-300 via-olive-400 to-olive-500 transition-all duration-700" style="width:0%"></div>
+          </div>
+          <div id="progBus" class="bus-icon absolute -top-7 text-2xl" style="left:0%; transform:translateX(-10%)">🚌</div>
+        </div>
+        <div class="flex items-center justify-between text-[11px] text-olive-500 dark:text-olive-300 mt-3">
+          <span id="progText">0 / 0 คน</span>
+          <span id="progHint">เริ่มต้น</span>
+        </div>
+      </div>
 
-                let health = row['สุขภาพเบื้องต้น'] ? row['สุขภาพเบื้องต้น'].toString() : '';
-                if(health.includes('แข็งแรง')) healthCounts['แข็งแรงดี']++;
-                else {
-                    let hasIssue = false;
-                    if(health.includes('เหลือง')) { healthCounts['ตัวเหลือง']++; hasIssue=true;}
-                    if(health.includes('สะดือ')) { healthCounts['สะดืออักเสบ']++; hasIssue=true;}
-                    if(health.includes('นม')) { healthCounts['ดื่มนมได้น้อย']++; hasIssue=true;}
-                    if(!hasIssue && health !== 'ไม่ได้ระบุ') healthCounts['อื่นๆ']++;
-                }
+      <!-- Charts -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="glass-card rounded-3xl p-4 border border-olive-100/70 dark:border-night-700/70 shadow-soft">
+          <h3 class="font-semibold text-sm mb-3">📊 อัตราการสแกนตามชั้นเรียน</h3>
+          <div class="h-64"><canvas id="chartClass"></canvas></div>
+        </div>
+        <div class="glass-card rounded-3xl p-4 border border-olive-100/70 dark:border-night-700/70 shadow-soft">
+          <h3 class="font-semibold text-sm mb-3">⏰ ช่วงเวลามาถึงโรงเรียน</h3>
+          <div class="h-64"><canvas id="chartTime"></canvas></div>
+        </div>
+      </div>
 
-                let bDateStr = row['วันเกิด'];
-                if(bDateStr) {
-                    let d = new Date(bDateStr);
-                    if(!isNaN(d)) {
-                        let ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-                        birthTrends[ym] = (birthTrends[ym] || 0) + 1;
-                    }
-                }
-            });
+      <!-- Filters -->
+      <div class="glass-card rounded-3xl p-4 border border-olive-100/70 dark:border-night-700/70 shadow-soft mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+          <input id="fSearch" type="text" placeholder="🔍 ค้นหาชื่อ / รหัส..."
+            class="md:col-span-2 px-3.5 py-2.5 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none focus:ring-2 focus:ring-olive-400/50 text-sm">
+          <select id="fClass" class="px-3.5 py-2.5 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none text-sm">
+            <option value="">ทุกชั้นเรียน</option>
+          </select>
+          <select id="fStatus" class="px-3.5 py-2.5 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none text-sm">
+            <option value="">ทุกสถานะ</option>
+            <option value="scanned">✅ สแกนแล้ว</option>
+            <option value="absent">❌ ยังไม่สแกน</option>
+            <option value="leave">📝 ลา</option>
+            <option value="late">🕗 มาสาย</option>
+            <option value="streak3">🔥 Streak ≥ 3 วัน</option>
+          </select>
+        </div>
 
-            [barChartInst, pieChartInst, lineChartInst, feedingChartInst, healthChartInst].forEach(c => { if(c) c.destroy(); });
+        <div class="mt-2 flex items-center gap-3 flex-wrap text-[10px] text-olive-500 dark:text-olive-300">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-400 inline-block"></span>มาแล้ว</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-pink-300 inline-block"></span>ลา</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-rose-200 inline-block"></span>ขาด</span>
+          <span class="flex items-center gap-1">🔥<span>สแกนต่อเนื่อง</span></span>
+        </div>
 
-            barChartInst = new Chart(document.getElementById('barChart'), {
-                type: 'bar', data: { labels: Object.keys(mooCounts), datasets: [{ data: Object.values(mooCounts), backgroundColor: '#FFA6C9', borderRadius: 6 }] },
-                options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
+        <div class="flex items-center justify-between mt-3 text-xs text-olive-500 dark:text-olive-300">
+          <span id="filterCount">–</span>
+          <select id="fSort" class="px-2.5 py-1.5 rounded-lg border border-olive-200 dark:border-night-600 bg-white/70 dark:bg-night-800 outline-none text-xs">
+            <option value="id">เรียงตามรหัส</option>
+            <option value="name">เรียงตามชื่อ</option>
+            <option value="class">เรียงตามชั้น</option>
+            <option value="time">เรียงตามเวลาสแกน</option>
+            <option value="streak">🔥 Streak สูงสุด</option>
+          </select>
+        </div>
+      </div>
 
-            pieChartInst = new Chart(document.getElementById('pieChart'), {
-                type: 'doughnut', data: { labels: ['ชาย', 'หญิง'], datasets: [{ data: [genderCounts['ชาย'], genderCounts['หญิง']], backgroundColor: ['#89CFF0', '#FFA6C9'], borderWidth: 0 }] },
-                options: { maintainAspectRatio: false }
-            });
+      <!-- Student list -->
+      <div class="glass-card rounded-3xl p-4 border border-olive-100/70 dark:border-night-700/70 shadow-soft">
+        <h3 class="font-semibold text-sm mb-3">📋 รายชื่อนักเรียน</h3>
+        <div id="studentList" class="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+          <p class="text-center text-sm text-olive-400 py-6">กำลังโหลด...</p>
+        </div>
+      </div>
+    </section>
 
-            const sortedMonths = Object.keys(birthTrends).sort();
-            const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-            const labelsLine = sortedMonths.map(ym => { let [y, m] = ym.split('-'); return `${thaiMonths[parseInt(m)-1]} ${(parseInt(y)+543).toString().substring(2)}`; });
-            lineChartInst = new Chart(document.getElementById('lineChart'), {
-                type: 'bar', 
-                data: { labels: labelsLine, datasets: [{ label: 'เด็กเกิดใหม่', data: sortedMonths.map(ym => birthTrends[ym]), backgroundColor: '#3b82f6', borderRadius: 6 }] },
-                options: { 
-                    maintainAspectRatio: false, 
-                    scales: { y: { beginAtZero: true, grace: 1, ticks: { stepSize: 1 } } },
-                    plugins: { legend: { display: false } }
-                },
-                plugins: [{
-                    id: 'showDataLabels',
-                    afterDatasetsDraw(chart) {
-                        const { ctx } = chart;
-                        ctx.font = 'bold 13px Kanit';
-                        ctx.fillStyle = '#374151';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'bottom';
-                        chart.data.datasets.forEach((dataset, i) => {
-                            const meta = chart.getDatasetMeta(i);
-                            meta.data.forEach((bar, index) => {
-                                const val = dataset.data[index];
-                                if (val > 0) ctx.fillText(val, bar.x, bar.y - 4);
-                            });
-                        });
-                    }
-                }]
-            });
+    <!-- ============ PAGE: LEAVE ============ -->
+    <section id="page-leave" class="page">
 
-            feedingChartInst = new Chart(document.getElementById('feedingChart'), {
-                type: 'pie', data: { labels: Object.keys(feedCounts), datasets: [{ data: Object.values(feedCounts), backgroundColor: ['#fbcfe8', '#bfdbfe', '#fde047'], borderWidth: 1 }] },
-                options: { maintainAspectRatio: false }
-            });
+      <!-- Today's leaves -->
+      <div class="glass-card rounded-3xl p-4 border border-olive-100/70 dark:border-night-700/70 shadow-soft mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-sm flex items-center gap-2">📋 รายการลาวันนี้</h3>
+          <span id="leaveTodayCount"
+            class="text-xs px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-300 font-semibold">0 คน</span>
+        </div>
+        <div id="leaveTodayList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+          <p class="text-center text-sm text-olive-400 py-6">กำลังโหลด...</p>
+        </div>
+      </div>
 
-            healthChartInst = new Chart(document.getElementById('healthChart'), {
-                type: 'bar', data: { labels: Object.keys(healthCounts), datasets: [{ label: 'จำนวน (ราย)', data: Object.values(healthCounts), backgroundColor: ['#4ade80', '#fbbf24', '#f87171', '#c084fc', '#9ca3af'], borderRadius: 4 }] },
-                options: { maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
-            });
-        }
+      <!-- New leave form -->
+      <div class="glass-card rounded-3xl p-4 border border-olive-100/70 dark:border-night-700/70 shadow-soft">
+        <h3 class="font-semibold text-sm mb-3 flex items-center gap-2">➕ ลงทะเบียนลาใหม่</h3>
 
-        // ==========================================
-        // 🌟 Update Table
-        // ==========================================
-        function updateTable() {
-            const tbody = document.getElementById('dataTableBody');
-            tbody.innerHTML = '';
-            if(filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-gray-500">ไม่พบข้อมูลตามเงื่อนไขที่กรอง</td></tr>`;
-            } else {
-                [...filteredData].reverse().forEach(row => {
-                    let vDate = row['วันที่เยี่ยมบ้าน'] ? new Date(row['วันที่เยี่ยมบ้าน']).toLocaleDateString('th-TH') : '-';
-                    let healthClass = (row['สุขภาพเบื้องต้น']||'').includes('แข็งแรง') ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700';
-                    let giftClass = (row['สถานะของขวัญ']||'').includes('มอบ') ? 'text-green-500' : 'text-orange-500';
-                    
-                    let mediaLinks = '';
-                    if(row['พิกัดบ้าน']) mediaLinks += `<a href="https://maps.google.com/?q=${row['พิกัดบ้าน']}" target="_blank" class="text-blue-500 hover:underline mr-2 text-xs">📍 แผนที่</a>`;
-                    if(row['รูปลิงก์(เด็ก)']) mediaLinks += `<a href="${row['รูปลิงก์(เด็ก)']}" target="_blank" class="text-pink-500 hover:underline mr-2 text-xs">👶 รูปเด็ก</a>`;
-                    if(row['รูปลิงก์(บ้าน)']) mediaLinks += `<a href="${row['รูปลิงก์(บ้าน)']}" target="_blank" class="text-blue-600 hover:underline text-xs">🏠 รูปบ้าน</a>`;
-                    
-                    let tr = document.createElement('tr'); tr.className = "hover:bg-gray-50";
-                    tr.innerHTML = `
-                        <td class="p-4 text-gray-500">${vDate}</td>
-                        <td class="p-4 font-medium text-gray-800">${row['ชื่อ-สกุลเด็ก'] || '-'}</td>
-                        <td class="p-4">${row['หมู่บ้าน'] || '-'}</td>
-                        <td class="p-4"><span class="${healthClass} px-2 py-1 rounded text-xs">${row['สุขภาพเบื้องต้น']||'-'}</span></td>
-                        <td class="p-4">${mediaLinks||'-'}</td>
-                        <td class="p-4 text-center"><span class="${giftClass} font-medium">${row['สถานะของขวัญ']||'-'}</span></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
-            document.getElementById('table-count-label').innerText = `แสดงข้อมูล ${filteredData.length} รายการ`;
-        }
+        <div class="space-y-3">
+          <!-- Student picker -->
+          <div>
+            <label class="text-xs text-olive-500 dark:text-olive-300 mb-1 block font-medium">
+              👧 เลือกนักเรียน <span class="text-rose-500">*</span>
+            </label>
+            <input id="leaveSearch" type="text" autocomplete="off"
+              placeholder="🔍 พิมพ์ชื่อ / รหัส เพื่อกรองรายชื่อ..."
+              class="w-full px-3.5 py-2.5 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none focus:ring-2 focus:ring-rose-300/50 text-sm mb-2">
+            <select id="leaveStudent" size="5"
+              class="w-full px-3 py-2 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none focus:ring-2 focus:ring-rose-300/50 text-sm">
+              <option disabled>กำลังโหลดรายชื่อ...</option>
+            </select>
+            <p id="leaveStudentHint" class="text-[11px] text-olive-400 mt-1">ยังไม่ได้เลือก</p>
+          </div>
 
-        // ==========================================
-        // 🌟 Form Submissions (Image Upload & Auto-fill)
-        // ==========================================
-        function populateChildDropdown() {
-            const datalist = document.getElementById('childNameList');
-            if (!datalist) return;
-            datalist.innerHTML = '';
-            
-            // รวบรวมรายชื่อเด็กจากทั้ง Master List และข้อมูลประวัติทั้งหมด
-            let names = new Set();
-            childMasterList.forEach(child => { if(child['ชื่อ-สกุลเด็ก']) names.add(child['ชื่อ-สกุลเด็ก']); });
-            appData.forEach(row => { if(row['ชื่อ-สกุลเด็ก']) names.add(row['ชื่อ-สกุลเด็ก']); });
+          <!-- Dates -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="text-xs text-olive-500 dark:text-olive-300 mb-1 block font-medium">
+                📅 วันที่เริ่ม <span class="text-rose-500">*</span>
+              </label>
+              <input id="leaveFrom" type="date"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none focus:ring-2 focus:ring-rose-300/50 text-sm">
+            </div>
+            <div>
+              <label class="text-xs text-olive-500 dark:text-olive-300 mb-1 block font-medium">
+                📅 ถึงวันที่
+              </label>
+              <input id="leaveTo" type="date"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none focus:ring-2 focus:ring-rose-300/50 text-sm">
+            </div>
+          </div>
 
-            // สร้างตัวเลือก Dropdown
-            names.forEach(name => {
-                let opt = document.createElement('option');
-                opt.value = name;
-                datalist.appendChild(opt);
-            });
-        }
+          <!-- Type + Recorder -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="text-xs text-olive-500 dark:text-olive-300 mb-1 block font-medium">🏷️ ประเภท</label>
+              <select id="leaveType"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none focus:ring-2 focus:ring-rose-300/50 text-sm">
+                <option value="ป่วย">🤒 ป่วย</option>
+                <option value="ธุระ">📌 ธุระ</option>
+                <option value="กิจกรรม">🎯 กิจกรรม</option>
+                <option value="ลาพักร้อน">🏖️ ลาพักร้อน</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-olive-500 dark:text-olive-300 mb-1 block font-medium">👤 ผู้บันทึก</label>
+              <input id="leaveRecorder" type="text" placeholder="ชื่อครู"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none focus:ring-2 focus:ring-rose-300/50 text-sm">
+            </div>
+          </div>
 
-        function autoFillChildData() {
-            const input = document.getElementById('childNameInput');
-            const selectedName = input.value.trim();
-            if(!selectedName) return;
+          <!-- Reason -->
+          <div>
+            <label class="text-xs text-olive-500 dark:text-olive-300 mb-1 block font-medium">📝 เหตุผล / หมายเหตุ</label>
+            <input id="leaveReason" type="text" placeholder="เช่น มีไข้สูง"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none focus:ring-2 focus:ring-rose-300/50 text-sm">
+          </div>
 
-            // ค้นหาข้อมูลจากทะเบียนเด็กทารก
-            let childBaseline = childMasterList.find(c => c['ชื่อ-สกุลเด็ก'] === selectedName);
-            
-            // ค้นหาข้อมูลจากการเยี่ยมล่าสุดใน appData
-            let latestVisit = null;
-            const childVisits = appData.filter(row => row['ชื่อ-สกุลเด็ก'] === selectedName);
-            if(childVisits.length > 0) {
-                latestVisit = childVisits[childVisits.length - 1]; // ดึงประวัติที่ใหม่ที่สุด
-            }
+          <!-- Quick range buttons -->
+          <div class="flex gap-2 flex-wrap">
+            <button type="button" data-quick-range="1" class="px-3 py-1.5 rounded-full bg-olive-100 dark:bg-night-700 text-olive-700 dark:text-olive-100 text-xs font-medium hover:bg-olive-200 dark:hover:bg-night-600 transition">วันนี้</button>
+            <button type="button" data-quick-range="3" class="px-3 py-1.5 rounded-full bg-olive-100 dark:bg-night-700 text-olive-700 dark:text-olive-100 text-xs font-medium hover:bg-olive-200 dark:hover:bg-night-600 transition">3 วัน</button>
+            <button type="button" data-quick-range="5" class="px-3 py-1.5 rounded-full bg-olive-100 dark:bg-night-700 text-olive-700 dark:text-olive-100 text-xs font-medium hover:bg-olive-200 dark:hover:bg-night-600 transition">5 วัน</button>
+            <button type="button" data-quick-range="7" class="px-3 py-1.5 rounded-full bg-olive-100 dark:bg-night-700 text-olive-700 dark:text-olive-100 text-xs font-medium hover:bg-olive-200 dark:hover:bg-night-600 transition">1 สัปดาห์</button>
+          </div>
 
-            // 1. เติมข้อมูลพื้นฐานและครอบครัว
-            if (childBaseline || latestVisit) {
-                let genderVal = (childBaseline && childBaseline['เพศ']) || (latestVisit && latestVisit['เพศ']) || '';
-                if(genderVal) document.querySelector('select[name="gender"]').value = genderVal;
-                
-                let bDate = (childBaseline && childBaseline['วันเกิด']) || (latestVisit && latestVisit['วันเกิด']) || '';
-                if(bDate) {
-                    let d = new Date(bDate);
-                    if(!isNaN(d)) document.querySelector('input[name="birthDate"]').value = d.toISOString().split('T')[0];
-                }
-                
-                let parentVal = (childBaseline && childBaseline['ชื่อผู้ปกครอง']) || (latestVisit && latestVisit['ชื่อผู้ปกครอง']) || '';
-                if(parentVal) document.querySelector('input[name="parentName"]').value = parentVal;
+          <!-- Save button -->
+          <button id="btnSaveLeave"
+            class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-400 to-rose-500 text-white font-semibold shadow-soft hover:shadow-lg active:scale-[.98] transition flex items-center justify-center gap-2">
+            <span>💾</span><span id="btnSaveLeaveText">บันทึกการลา</span>
+          </button>
+        </div>
+      </div>
+    </section>
 
-                let phoneVal = (childBaseline && childBaseline['เบอร์โทร']) || (latestVisit && latestVisit['เบอร์โทร']) || '';
-                if(phoneVal) document.querySelector('input[name="phone"]').value = phoneVal;
-            }
+    <!-- ============ PAGE: QR GENERATOR ============ -->
+    <section id="page-qr" class="page">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="text-lg font-bold">สร้าง QR Code (Batch)</h2>
+          <p class="text-xs text-olive-500 dark:text-olive-300">พิมพ์สติกเกอร์ติดหมวกนิรภัย</p>
+        </div>
+      </div>
 
-            // 2. เติมข้อมูลสุขภาพจากการเยี่ยมล่าสุด (เพื่อให้ไม่ต้องพิมพ์ใหม่ทั้งหมด)
-            if(latestVisit) {
-                if(latestVisit['น้ำหนัก(กก.)']) document.querySelector('input[name="weight"]').value = latestVisit['น้ำหนัก(กก.)'];
-                if(latestVisit['ส่วนสูง(ซม.)']) document.querySelector('input[name="height"]').value = latestVisit['ส่วนสูง(ซม.)'];
-                if(latestVisit['การดื่มนม']) document.querySelector('select[name="feedingType"]').value = latestVisit['การดื่มนม'];
-                if(latestVisit['การคลอด']) document.querySelector('select[name="deliveryMethod"]').value = latestVisit['การคลอด'];
-                if(latestVisit['การขับถ่าย']) document.querySelector('select[name="excretion"]').value = latestVisit['การขับถ่าย'];
-                if(latestVisit['ประวัติวัคซีน']) document.querySelector('select[name="vaccine"]').value = latestVisit['ประวัติวัคซีน'];
-                if(latestVisit['การคุมกำเนิด(มารดา)']) document.querySelector('input[name="birthControl"]').value = latestVisit['การคุมกำเนิด(มารดา)'];
-            }
-        }
+      <div class="glass-card rounded-3xl p-4 border border-olive-100/70 dark:border-night-700/70 shadow-soft mb-4 no-print">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+          <select id="qrClass" class="px-3.5 py-2.5 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none text-sm">
+            <option value="">🏫 ทั้งโรงเรียน</option>
+          </select>
+          <select id="qrSize" class="px-3.5 py-2.5 rounded-xl border border-olive-200 dark:border-night-600 bg-white/80 dark:bg-night-800 outline-none text-sm">
+            <option value="180">ขนาดกลาง (180px)</option>
+            <option value="140">ขนาดเล็ก (140px)</option>
+            <option value="220">ขนาดใหญ่ (220px)</option>
+          </select>
+          <button id="btnGenQr"
+            class="py-2.5 rounded-xl bg-gradient-to-r from-olive-500 to-olive-600 text-white font-semibold shadow-soft hover:shadow-lg active:scale-[.98] transition">
+            ✨ สร้าง QR Code
+          </button>
+        </div>
+        <div class="flex gap-2.5 mt-3">
+          <button id="btnPrintQr"
+            class="flex-1 py-2.5 rounded-xl bg-white/80 dark:bg-night-700 border border-olive-200 dark:border-night-600 font-semibold text-sm hover:scale-[1.02] transition">
+            🖨️ พิมพ์สติกเกอร์ (A4)
+          </button>
+          <span id="qrCount" class="px-4 py-2.5 rounded-xl bg-olive-100 dark:bg-night-700 text-olive-700 dark:text-olive-100 text-sm font-semibold flex items-center">0 การ์ด</span>
+        </div>
+      </div>
 
-        function resizeAndGetBase64(file) {
-            return new Promise((resolve, reject) => {
-                if (!file) { resolve(""); return; }
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (e) => {
-                    const img = new Image(); img.src = e.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800; const scale = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH; canvas.height = img.height * scale;
-                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]);
-                    };
-                };
-                reader.onerror = error => reject(error);
-            });
-        }
+      <div id="printArea" class="glass-card rounded-3xl p-4 border border-olive-100/70 dark:border-night-700/70 shadow-soft">
+        <div id="qrGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <p class="col-span-full text-center text-sm text-olive-400 py-10">ยังไม่มีการสร้าง QR Code — เลือกชั้นเรียนแล้วกด "สร้าง QR Code"</p>
+        </div>
+      </div>
+    </section>
 
-        async function submitForm(event) {
-            event.preventDefault();
-            const form = event.target; const formData = new FormData(form);
-            const dataObj = Object.fromEntries(formData.entries());
-            dataObj.healthStatus = formData.getAll('healthStatus').join(', ') || 'ไม่ได้ระบุ';
+  </main>
 
-            if (!GAS_URL) { alert('⚠️ โปรดใส่ GAS_URL ก่อนบันทึก'); return; }
+  <!-- ================= BOTTOM NAV ================= -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 no-print">
+    <div class="max-w-lg mx-auto px-3 pb-3">
+      <div class="glass-card rounded-3xl border border-olive-100/70 dark:border-night-700/70 shadow-soft p-1.5 flex items-center gap-1">
+        <button data-nav="scan" class="nav-btn flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl text-[11px] font-semibold transition active:scale-95">
+          <span class="text-xl">📷</span><span>สแกน</span>
+        </button>
+        <button data-nav="dashboard" class="nav-btn flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl text-[11px] font-semibold transition active:scale-95">
+          <span class="text-xl">📊</span><span>แดชบอร์ด</span>
+        </button>
+        <button data-nav="leave" class="nav-btn flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl text-[11px] font-semibold transition active:scale-95">
+          <span class="text-xl">📝</span><span>การลา</span>
+        </button>
+        <button data-nav="qr" class="nav-btn flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl text-[11px] font-semibold transition active:scale-95">
+          <span class="text-xl">🎫</span><span>QR Code</span>
+        </button>
+      </div>
+    </div>
+  </nav>
 
-            document.getElementById('loading-text').innerText = "กำลังอัปโหลดรูปและบันทึกข้อมูล...";
-            document.getElementById('loading-overlay').classList.remove('hidden-load');
+  <!-- ================= STUDENT PROFILE MODAL ================= -->
+  <div id="profileModal" class="fixed inset-0 z-[70] hidden">
+    <div class="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" data-close></div>
 
-            try {
-                const fChild = document.getElementById('childPhoto').files[0];
-                const fHouse = document.getElementById('housePhoto').files[0];
-                dataObj.childPhotoBase64 = fChild ? await resizeAndGetBase64(fChild) : "";
-                dataObj.housePhotoBase64 = fHouse ? await resizeAndGetBase64(fHouse) : "";
+    <div class="absolute inset-x-3 top-8 bottom-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:max-w-md sm:w-full flex flex-col">
+      <div class="glass-card rounded-3xl border border-olive-100/70 dark:border-night-700/70 shadow-soft h-full flex flex-col overflow-hidden">
 
-                const response = await fetch(GAS_URL, {
-                    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(dataObj)
-                });
-                const result = await response.json();
-                if(result.status === 'success') {
-                    alert('✅ บันทึกข้อมูลเรียบร้อย');
-                    form.reset(); document.getElementById('gpsInput').value = '';
-                    switchView('data'); fetchSheetData();
-                } else { alert('❌ เกิดข้อผิดพลาด: ' + result.message); }
-            } catch (error) { alert('เกิดข้อผิดพลาดในการเชื่อมต่อ'); } 
-            finally { 
-                document.getElementById('loading-overlay').classList.add('hidden-load'); 
-                document.getElementById('loading-text').innerText = "กำลังโหลดข้อมูล...";
-            }
-        }
+        <div class="px-4 py-3 flex items-center gap-3 border-b border-olive-100/70 dark:border-night-700/70 shrink-0">
+          <button data-close
+            class="w-9 h-9 rounded-full bg-white/70 dark:bg-night-700 hover:bg-white dark:hover:bg-night-600 flex items-center justify-center active:scale-90 transition text-lg font-bold"
+            title="ปิด">←</button>
+          <h3 class="font-bold text-sm flex-1 truncate">โปรไฟล์นักเรียน</h3>
+          <button id="btnProfileRefresh"
+            class="w-9 h-9 rounded-full bg-white/70 dark:bg-night-700 hover:bg-white dark:hover:bg-night-600 flex items-center justify-center active:scale-90 transition"
+            title="รีเฟรช">↻</button>
+        </div>
 
-        // ==========================================
-        // 🌟 Initializer
-        // ==========================================
-        window.onload = () => { 
-            initMap(); 
-            switchView('dashboard'); 
-            fetchSheetData(); 
+        <div id="profileBody" class="p-4 overflow-y-auto flex-1">
+          <div class="flex flex-col items-center justify-center h-full text-center py-10">
+            <div class="text-4xl mb-3 animate-pulse">👧</div>
+            <p class="text-sm text-olive-400">กำลังโหลด...</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PWA MANIFEST (injected) ================= -->
+  <script>
+    (function () {
+      try {
+        var manifest = {
+          name: 'ระบบสแกนหมวกนิรภัยเด็กอนุบาล',
+          short_name: 'หมวกนิรภัย',
+          description: 'สแกน QR Code หมวกนิรภัยเด็กอนุบาล',
+          start_url: '.',
+          display: 'standalone',
+          background_color: '#FCFAF4',
+          theme_color: '#7C8C5A',
+          orientation: 'portrait',
+          icons: [
+            { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(
+              '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="42" fill="#7C8C5A"/><text x="96" y="128" font-size="110" text-anchor="middle">🪖</text></svg>'
+            ), sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+            { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(
+              '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#7C8C5A"/><text x="256" y="340" font-size="300" text-anchor="middle">🪖</text></svg>'
+            ), sizes: '512x512', type: 'image/svg+xml', purpose: 'any' }
+          ]
         };
-    </script>
+        var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+        var link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = URL.createObjectURL(blob);
+        document.head.appendChild(link);
+      } catch (e) { console.warn('manifest', e); }
+    })();
+  </script>
+
+  <!-- ============================================================
+       MAIN APPLICATION SCRIPT
+  ============================================================ -->
+  <script>
+  (function () {
+    'use strict';
+
+    /* ============== STATE ============== */
+    const State = {
+      currentPage: 'scan',
+      bootstrap: null,
+      dashboard: null,
+      filtered: [],
+      scanner: null,
+      cameraOn: false,
+      lastScanKey: '',
+      lastScanTime: 0,
+      scanning: false,
+      confettiFired: false,
+      classChart: null,
+      timeChart: null,
+      streaks: {},
+      leaveTypes: ['ป่วย', 'ธุระ', 'กิจกรรม', 'ลาพักร้อน']
+    };
+
+    /* ============== HELPERS ============== */
+    const $  = (s, r) => (r || document).querySelector(s);
+    const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+    function el(tag, attrs, children) {
+      const e = document.createElement(tag);
+      if (attrs) for (const k in attrs) {
+        if (k === 'class') e.className = attrs[k];
+        else if (k === 'html') e.innerHTML = attrs[k];
+        else if (k === 'text') e.textContent = attrs[k];
+        else if (k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]);
+        else e.setAttribute(k, attrs[k]);
+      }
+      (children || []).forEach(c => e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c));
+      return e;
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function debounce(fn, ms) {
+      let t;
+      return function () {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, arguments), ms);
+      };
+    }
+
+    /* ============== BACKEND BRIDGE ============== */
+    function callServer(fnName) {
+      const args = Array.prototype.slice.call(arguments, 1);
+      return new Promise((resolve, reject) => {
+        if (typeof google === 'undefined' || !google.script || !google.script.run) {
+          reject(new Error('ไม่พบ google.script.run — กรุณาเปิดผ่าน Web App URL'));
+          return;
+        }
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(err => reject(err))
+          [fnName].apply(null, args);
+      });
+    }
+
+    /* ============== TOAST ============== */
+    function toast(type, title, message, ms) {
+      const palette = {
+        ok:   { bg: 'from-emerald-500 to-emerald-600', icon: '✅' },
+        err:  { bg: 'from-rose-400 to-rose-500',       icon: '⚠️' },
+        warn: { bg: 'from-amber-400 to-amber-500',     icon: '💡' },
+        info: { bg: 'from-olive-400 to-olive-600',     icon: 'ℹ️' }
+      };
+      const p = palette[type] || palette.info;
+      const box = $('#toastBox');
+      const node = el('div', {
+        class: `toast rounded-2xl shadow-soft bg-gradient-to-r ${p.bg} text-white px-4 py-3 flex items-start gap-3`
+      });
+      node.innerHTML =
+        `<div class="text-xl leading-none mt-0.5">${p.icon}</div>
+         <div class="flex-1 min-w-0">
+           <div class="font-semibold text-sm leading-tight">${escapeHtml(title)}</div>
+           ${message ? `<div class="text-xs opacity-95 mt-0.5 break-words">${escapeHtml(message)}</div>` : ''}
+         </div>`;
+      box.appendChild(node);
+      setTimeout(() => {
+        node.classList.add('out');
+        setTimeout(() => node.remove(), 320);
+      }, ms || 2600);
+    }
+
+    /* ============== SOUND ============== */
+    let audioCtx = null;
+    function ctx() {
+      if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        catch (e) { audioCtx = null; }
+      }
+      return audioCtx;
+    }
+    function beep(freq, dur, type, vol) {
+      const ac = ctx(); if (!ac) return;
+      try {
+        if (ac.state === 'suspended') ac.resume();
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = type || 'sine';
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(vol == null ? 0.14 : vol, ac.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + (dur || 0.12));
+        o.connect(g); g.connect(ac.destination);
+        o.start(); o.stop(ac.currentTime + (dur || 0.12));
+      } catch (e) {}
+    }
+    function soundOk()    { beep(880, 0.09, 'sine', 0.16); setTimeout(() => beep(1320, 0.14, 'sine', 0.13), 90); }
+    function soundErr()   { beep(220, 0.22, 'square', 0.10); }
+    function soundDup()   { beep(660, 0.10, 'triangle', 0.12); setTimeout(() => beep(440, 0.16, 'triangle', 0.10), 100); }
+    function soundClick() { beep(520, 0.05, 'sine', 0.07); }
+
+    function vibrate(pattern) {
+      try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+    }
+
+    /* ============== CONFETTI ============== */
+    function fireConfetti() {
+      if (typeof confetti !== 'function') return;
+      const colors = ['#7C8C5A', '#B6C48D', '#F5C7C7', '#F1EAD4', '#93A468'];
+      confetti({ particleCount: 90, spread: 78, origin: { y: 0.35 }, colors, scalar: 0.95 });
+      setTimeout(() => confetti({ particleCount: 60, angle: 60,  spread: 60, origin: { x: 0, y: 0.6 }, colors }), 160);
+      setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 60, origin: { x: 1, y: 0.6 }, colors }), 260);
+    }
+
+    /* ============== THEME ============== */
+    function applyTheme(dark) {
+      document.documentElement.classList.toggle('dark', dark);
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', dark ? '#1F2418' : '#7C8C5A');
+      const icon = $('#themeIcon');
+      if (icon) icon.textContent = dark ? '☀️' : '🌙';
+      try { localStorage.setItem('helmet.theme', dark ? 'dark' : 'light'); } catch (e) {}
+      if (State.dashboard) {
+        renderClassChart(State.dashboard.byClass);
+        renderTimeChart(State.dashboard.byTime);
+      }
+    }
+    function initTheme() {
+      let dark = false;
+      try {
+        const saved = localStorage.getItem('helmet.theme');
+        if (saved) dark = saved === 'dark';
+        else dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      } catch (e) {}
+      applyTheme(dark);
+    }
+
+    /* ============== NAVIGATION ============== */
+    const NAV_BASE = 'nav-btn flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl text-[11px] font-semibold transition active:scale-95';
+    const NAV_ON  = NAV_BASE + ' bg-olive-500 text-white shadow-soft';
+    const NAV_OFF = NAV_BASE + ' text-olive-600 dark:text-olive-200 hover:bg-olive-100/70 dark:hover:bg-night-700/70';
+
+    function navigate(page, silent) {
+      if (page === State.currentPage && !silent) return;
+      State.currentPage = page;
+
+      $$('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
+      $$('.nav-btn').forEach(b => {
+        b.className = (b.dataset.nav === page) ? NAV_ON : NAV_OFF;
+      });
+
+      const titles = {
+        scan:      ['สแกนหมวกนิรภัย', 'สแกน QR Code ประจำวัน'],
+        dashboard: ['แดชบอร์ด',       'ภาพรวมและวิเคราะห์ข้อมูล'],
+        leave:     ['การลาล่วงหน้า',   'ลงทะเบียน / ดูรายการลา'],
+        qr:        ['สร้าง QR Code',   'พิมพ์สติกเกอร์หมวกนิรภัย']
+      };
+      const t = titles[page] || titles.scan;
+      $('#hdrTitle').textContent = t[0];
+      $('#hdrSub').textContent = t[1];
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (page === 'dashboard') loadDashboard();
+      if (page === 'scan' && State.cameraOn === false) loadScanPageData();
+      if (page === 'leave') {
+        renderLeaveStudentList();
+        loadLeavesToday();
+        if (!$('#leaveRecorder').value && State.bootstrap) {
+          $('#leaveRecorder').value = State.bootstrap.scannerDefault || '';
+        }
+      }
+
+      if (!silent) soundClick();
+    }
+
+    /* ============================================================
+       SCANNER
+    ============================================================ */
+    async function startCamera() {
+      if (State.cameraOn) { stopCamera(); return; }
+
+      const btn = $('#btnStartCam');
+      const icon = $('#btnCamBtnIcon') || $('#camBtnIcon');
+      const txt  = $('#camBtnText');
+
+      try {
+        btn.disabled = true;
+        icon.textContent = '⏳';
+        txt.textContent = 'กำลังเปิดกล้อง...';
+
+        // ตรวจ HTTPS
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+          throw new Error('ต้องเปิดผ่าน HTTPS เท่านั้น');
+        }
+
+        // ตรวจ Browser API
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('เบราว์เซอร์ไม่รองรับกล้อง กรุณาใช้ Chrome/Safari เวอร์ชันใหม่');
+        }
+
+        // ตรวจ Permission
+        try {
+          if (navigator.permissions && navigator.permissions.query) {
+            const perm = await navigator.permissions.query({ name: 'camera' });
+            if (perm.state === 'denied') {
+              throw new Error('กล้องถูกบล็อกไว้ — กรุณาเปิดสิทธิ์ที่ไอคอน 🔒 มุมซ้าย URL bar');
+            }
+          }
+        } catch (permErr) { /* บาง browser ไม่รองรับ → ข้าม */ }
+
+        // ลองขอ stream ทดสอบ
+        try {
+          const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          testStream.getTracks().forEach(t => t.stop());
+        } catch (mediaErr) {
+          const map = {
+            'NotAllowedError': 'ผู้ใช้ไม่อนุญาตให้ใช้กล้อง',
+            'NotFoundError': 'ไม่พบกล้องในอุปกรณ์นี้',
+            'NotReadableError': 'กล้องถูกใช้งานโดยแอปอื่น',
+            'OverconstrainedError': 'กล้องไม่รองรับการตั้งค่าที่ขอ',
+            'SecurityError': 'เบราว์เซอร์บล็อกเพราะไม่ปลอดภัย (HTTP/iframe)',
+            'AbortError': 'การเปิดกล้องถูกยกเลิก'
+          };
+          throw new Error(map[mediaErr.name] || mediaErr.message || 'ไม่สามารถเข้าถึงกล้องได้');
+        }
+
+        if (typeof Html5Qrcode === 'undefined') throw new Error('ไม่พบไลบรารีสแกน QR');
+
+        State.scanner = new Html5Qrcode('qr-reader', { verbose: false });
+
+        await State.scanner.start(
+          { facingMode: 'environment' },
+          {
+            fps: 12,
+            qrbox: (vw, vh) => {
+              const m = Math.min(vw, vh);
+              const s = Math.floor(m * 0.72);
+              return { width: s, height: s };
+            },
+            aspectRatio: 1.0
+          },
+          onScanSuccess,
+          () => {}
+        );
+
+        State.cameraOn = true;
+        $('#camIdle').classList.add('hidden');
+        $('#scannerBadge').textContent = 'กำลังสแกน';
+        $('#scannerBadge').className = 'text-[11px] px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-200 font-medium';
+        icon.textContent = '⏹';
+        txt.textContent = 'หยุดกล้อง';
+      } catch (err) {
+        const msg = (err && err.message) ? err.message : String(err);
+        toast('err', 'เปิดกล้องไม่สำเร็จ', msg + ' — กรุณาใช้ช่องกรอกรหัสด้านล่าง', 6000);
+        soundErr();
+        console.error('[Camera Error]', err);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function stopCamera() {
+      try {
+        if (State.scanner) {
+          await State.scanner.stop();
+          await State.scanner.clear();
+        }
+      } catch (e) {}
+      State.scanner = null;
+      State.cameraOn = false;
+      $('#camIdle').classList.remove('hidden');
+      $('#scannerBadge').textContent = 'พร้อม';
+      $('#scannerBadge').className = 'text-[11px] px-2.5 py-1 rounded-full bg-olive-100 dark:bg-night-700 text-olive-600 dark:text-olive-200 font-medium';
+      $('#camBtnIcon').textContent = '▶️';
+      $('#camBtnText').textContent = 'เปิดกล้องสแกน';
+    }
+
+    async function onScanSuccess(decodedText) {
+      const now = Date.now();
+      if (State.scanning) return;
+      if (decodedText === State.lastScanKey && now - State.lastScanTime < 3500) return;
+
+      State.lastScanKey = decodedText;
+      State.lastScanTime = now;
+
+      const studentId = extractStudentId(decodedText);
+      await submitScan(studentId);
+    }
+
+    function extractStudentId(text) {
+      const s = String(text || '').trim();
+      try {
+        const m = s.match(/(?:id|studentId|code|student)=([^&\s]+)/i);
+        if (m && m[1]) return decodeURIComponent(m[1]);
+      } catch (e) {}
+      return s;
+    }
+
+    async function submitScan(studentId) {
+      if (!studentId) { toast('warn', 'ไม่พบรหัส', 'ไม่พบรหัสนักเรียนใน QR Code'); return; }
+      if (State.scanning) return;
+      State.scanning = true;
+
+      const wrap = $('#camWrap');
+      const scannerName = ($('#scannerName').value || '').trim();
+
+      try {
+        const res = await callServer('apiScan', { studentId, scanner: scannerName });
+
+        if (res && res.ok) {
+          soundOk();
+          vibrate([40, 40, 90]);
+          wrap.classList.add('flash-ok');
+          setTimeout(() => wrap.classList.remove('flash-ok'), 800);
+
+          toast('ok', '✅ ' + (res.student ? res.student.fullName : studentId),
+                (res.student ? res.student.className + ' • ' : '') + 'เวลา ' + res.time.substring(0, 5) + ' น.' + (res.status === 'สาย' ? ' (มาสาย)' : ''));
+
+          prependRecent({
+            time: res.time, id: studentId,
+            name: res.student ? res.student.fullName : '',
+            className: res.student ? res.student.className : '',
+            status: res.status
+          });
+          bumpMiniStats(+1);
+          State.confettiFired = false;
+
+          // Streak celebration
+          if (res.student && res.student.id) {
+            callServer('apiGetStudentProfile', res.student.id).then(function (p) {
+              if (p && p.ok && p.streak >= 3) {
+                setTimeout(function () {
+                  toast('info', '🔥 สแกนต่อเนื่อง ' + p.streak + ' วัน!',
+                        'สุดยอดเลย ' + (res.student.firstName || res.student.fullName));
+                }, 700);
+              }
+            }).catch(function () {});
+          }
+        } else if (res && res.code === 'DUPLICATE') {
+          soundDup();
+          vibrate([60, 50, 60]);
+          wrap.classList.add('flash-err');
+          setTimeout(() => wrap.classList.remove('flash-err'), 800);
+          toast('warn', '⚠️ สแกนซ้ำ', (res.student ? res.student.fullName + ' • ' : '') + res.message);
+        } else {
+          soundErr();
+          vibrate(160);
+          wrap.classList.add('flash-err');
+          setTimeout(() => wrap.classList.remove('flash-err'), 800);
+          toast('err', 'ไม่สำเร็จ', (res && res.message) || 'เกิดข้อผิดพลาด');
+        }
+      } catch (err) {
+        soundErr();
+        toast('err', 'เชื่อมต่อไม่สำเร็จ', (err && err.message) || String(err));
+      } finally {
+        State.scanning = false;
+      }
+    }
+
+    function recentRow(r) {
+      const statusColor = r.status === 'สาย'
+        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200'
+        : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-200';
+
+      return el('div', { class: 'flex items-center gap-3 p-2.5 rounded-2xl bg-white/60 dark:bg-night-800/60 border border-olive-100/70 dark:border-night-700' },
+        [
+          el('div', { class: 'w-10 h-10 rounded-xl bg-gradient-to-br from-olive-200 to-olive-400 dark:from-olive-700 dark:to-olive-800 flex items-center justify-center text-white font-bold text-sm', text: (r.name || r.id || '?').trim().charAt(0) || '?' }),
+          el('div', { class: 'flex-1 min-w-0' }, [
+            el('div', { class: 'text-sm font-semibold truncate', text: r.name || r.id }),
+            el('div', { class: 'text-[11px] text-olive-500 dark:text-olive-300 truncate', text: (r.className ? r.className + ' • ' : '') + (r.id || '') })
+          ]),
+          el('div', { class: 'text-right' }, [
+            el('div', { class: 'text-sm font-bold tabular-nums', text: (r.time || '').substring(0, 5) }),
+            el('div', { class: 'text-[10px] px-2 py-0.5 rounded-full inline-block mt-0.5 ' + statusColor, text: r.status || 'มา' })
+          ])
+        ]);
+    }
+
+    function prependRecent(r) {
+      const list = $('#recentList');
+      const empty = list.querySelector('p');
+      if (empty) empty.remove();
+      list.insertBefore(recentRow(r), list.firstChild);
+      while (list.children.length > 30) list.removeChild(list.lastChild);
+    }
+
+    function bumpMiniStats(delta) {
+      const s = $('#miniScanned');
+      const l = $('#miniLeft');
+      let sc = parseInt(s.textContent, 10) || 0;
+      let lf = parseInt(l.textContent, 10) || 0;
+      sc += delta; lf = Math.max(0, lf - delta);
+      s.textContent = sc; l.textContent = lf;
+    }
+
+    async function loadScanPageData() {
+      try {
+        const data = await callServer('getScanPageData');
+        if (!data || !data.ok) return;
+        $('#miniTotal').textContent = data.totalStudents;
+        $('#miniScanned').textContent = data.scannedCount;
+        $('#miniLeft').textContent = Math.max(0, data.totalStudents - data.scannedCount);
+
+        const list = $('#recentList');
+        list.innerHTML = '';
+        if (!data.recent || !data.recent.length) {
+          list.innerHTML = '<p class="text-center text-sm text-olive-400 py-6">ยังไม่มีการสแกนวันนี้</p>';
+        } else {
+          data.recent.forEach(r => list.appendChild(recentRow(r)));
+        }
+      } catch (e) { console.warn(e); }
+    }
+
+    /* ============================================================
+       DASHBOARD
+    ============================================================ */
+    async function loadDashboard() {
+      try {
+        $('#studentList').innerHTML = '<p class="text-center text-sm text-olive-400 py-6">กำลังโหลด...</p>';
+
+        const [data, streakRes] = await Promise.all([
+          callServer('getDashboardData'),
+          callServer('apiGetStreaks').catch(() => ({ ok: false, streaks: {} }))
+        ]);
+
+        if (!data || !data.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
+
+        State.dashboard = data;
+        State.streaks = (streakRes && streakRes.ok) ? (streakRes.streaks || {}) : {};
+        State.confettiFired = false;
+
+        $('#dashDate').textContent = data.dateThai + ' • อัปเดต ' + data.generatedAt;
+
+        $('#statTotal').textContent   = data.stats.total;
+        $('#statScanned').textContent = data.stats.scanned;
+        $('#statAbsent').textContent  = data.stats.absent;
+        $('#statLate').textContent    = data.stats.late || 0;
+        const elLeave = $('#statOnLeave');
+        if (elLeave) elLeave.textContent = data.stats.onLeave || 0;
+
+        setProgress(data.stats.percent, data.stats.scanned, data.stats.total);
+
+        const sel = $('#fClass');
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">ทุกชั้นเรียน</option>' +
+          data.classes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+        sel.value = cur;
+
+        renderClassChart(data.byClass);
+        renderTimeChart(data.byTime);
+        applyFilters();
+
+        if (data.stats.total > 0 && data.stats.percent === 100 && !State.confettiFired) {
+          State.confettiFired = true;
+          setTimeout(fireConfetti, 320);
+        }
+      } catch (e) {
+        toast('err', 'โหลดแดชบอร์ดไม่สำเร็จ', (e && e.message) || String(e));
+      }
+    }
+
+    function setProgress(percent, scanned, total) {
+      const p = Math.max(0, Math.min(100, percent || 0));
+      $('#progFill').style.width = p + '%';
+      $('#progPercent').textContent = p + '%';
+      $('#progText').textContent = scanned + ' / ' + total + ' คน';
+
+      const bus = $('#progBus');
+      bus.style.left = `calc(${p}% - ${Math.round(p * 0.22)}px)`;
+      bus.style.transform = 'translateX(-50%)';
+
+      let hint = 'เริ่มต้น';
+      if (p >= 100) hint = '🎉 ครบทุกคนแล้ว!';
+      else if (p >= 75) hint = 'ใกล้เสร็จแล้ว';
+      else if (p >= 50) hint = 'เกินครึ่งทาง';
+      else if (p > 0) hint = 'กำลังดำเนินการ';
+      $('#progHint').textContent = hint;
+    }
+
+    function chartTheme() {
+      const dark = document.documentElement.classList.contains('dark');
+      return {
+        grid:  dark ? 'rgba(255,255,255,0.08)' : 'rgba(124,140,90,0.12)',
+        text:  dark ? '#E9EEDB' : '#4B5537',
+        muted: dark ? '#B6C48D' : '#93A468'
+      };
+    }
+
+    function renderClassChart(byClass) {
+      const cvs = $('#chartClass');
+      if (!cvs) return;
+      const th = chartTheme();
+      const labels = byClass.map(c => c.className);
+      const scanned = byClass.map(c => c.scanned);
+      const absent  = byClass.map(c => c.absent);
+
+      if (State.classChart) State.classChart.destroy();
+
+      State.classChart = new Chart(cvs, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'สแกนแล้ว', data: scanned, backgroundColor: '#7C8C5A', borderRadius: 8, maxBarThickness: 28 },
+            { label: 'ยังไม่สแกน', data: absent,  backgroundColor: '#F5C7C7', borderRadius: 8, maxBarThickness: 28 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: th.text, font: { family: 'Noto Sans Thai', size: 12 }, boxWidth: 12, usePointStyle: true } },
+            tooltip: { backgroundColor: 'rgba(34,38,24,0.92)', titleFont: { family: 'Noto Sans Thai' }, bodyFont: { family: 'Noto Sans Thai' }, cornerRadius: 10, padding: 10 }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { color: th.text, font: { family: 'Noto Sans Thai', size: 11 } } },
+            y: { stacked: true, beginAtZero: true, grid: { color: th.grid }, ticks: { color: th.muted, precision: 0, font: { family: 'Noto Sans Thai', size: 11 } } }
+          }
+        }
+      });
+    }
+
+    function renderTimeChart(byTime) {
+      const cvs = $('#chartTime');
+      if (!cvs) return;
+      const th = chartTheme();
+      const labels = byTime.map(b => b.label);
+      const counts = byTime.map(b => b.count);
+
+      if (State.timeChart) State.timeChart.destroy();
+
+      State.timeChart = new Chart(cvs, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: counts,
+            backgroundColor: ['#E9EEDB', '#B6C48D', '#7C8C5A', '#4B5537', '#F5C7C7', '#EEA7A7'],
+            borderColor: document.documentElement.classList.contains('dark') ? '#1F2418' : '#FCFAF4',
+            borderWidth: 3, hoverOffset: 8
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '62%',
+          plugins: {
+            legend: { position: 'bottom', labels: { color: th.text, font: { family: 'Noto Sans Thai', size: 11 }, boxWidth: 10, usePointStyle: true, padding: 10 } },
+            tooltip: { backgroundColor: 'rgba(34,38,24,0.92)', titleFont: { family: 'Noto Sans Thai' }, bodyFont: { family: 'Noto Sans Thai' }, cornerRadius: 10, padding: 10, callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} คน` } }
+          }
+        }
+      });
+    }
+
+    /* ============== FILTERS & LIST ============== */
+    function buildRoster(data) {
+      const recMap = {};
+      (data.records || []).forEach(r => { recMap[r.id] = r; });
+
+      const leaveMap = {};
+      (data.leavers || []).forEach(l => { leaveMap[l.id] = l; });
+
+      const streakMap = State.streaks || {};
+
+      const all = (State.bootstrap && State.bootstrap.students ? State.bootstrap.students : [])
+        .map(s => {
+          const rec = recMap[s.id];
+          const lv = leaveMap[s.id];
+          return {
+            id: s.id,
+            fullName: s.fullName,
+            className: s.className,
+            time: rec ? rec.time : '',
+            status: rec ? rec.status : '',
+            scanned: !!rec,
+            onLeave: !!lv,
+            leaveType: lv ? lv.type : '',
+            leaveReason: lv ? lv.reason : '',
+            scanner: rec ? rec.scanner : '',
+            streak: streakMap[s.id] || 0
+          };
+        });
+
+      (data.records || []).forEach(r => {
+        if (!all.some(x => x.id === r.id)) {
+          all.push({
+            id: r.id, fullName: r.name, className: r.className,
+            time: r.time, status: r.status, scanned: true,
+            onLeave: false, leaveType: '', leaveReason: '',
+            scanner: r.scanner, streak: streakMap[r.id] || 0
+          });
+        }
+      });
+      return all;
+    }
+
+    function applyFilters() {
+      if (!State.dashboard) return;
+      const q = ($('#fSearch').value || '').trim().toLowerCase();
+      const cls = $('#fClass').value;
+      const st  = $('#fStatus').value;
+      const sort = $('#fSort').value;
+
+      let rows = buildRoster(State.dashboard);
+
+      if (q) rows = rows.filter(r =>
+        (r.fullName || '').toLowerCase().includes(q) || (r.id || '').toLowerCase().includes(q));
+      if (cls) rows = rows.filter(r => r.className === cls);
+
+      if (st === 'scanned') rows = rows.filter(r => r.scanned);
+      if (st === 'absent')  rows = rows.filter(r => !r.scanned && !r.onLeave);
+      if (st === 'leave')   rows = rows.filter(r => r.onLeave);
+      if (st === 'late')    rows = rows.filter(r => r.status === 'สาย');
+      if (st === 'streak3') rows = rows.filter(r => (r.streak || 0) >= 3);
+
+      rows.sort((a, b) => {
+        if (sort === 'name')  return (a.fullName || '').localeCompare(b.fullName || '', 'th');
+        if (sort === 'class') return (a.className || '').localeCompare(b.className || '', 'th') || (a.id || '').localeCompare(b.id || '');
+        if (sort === 'time')  return (a.time || '99').localeCompare(b.time || '99');
+        if (sort === 'streak') return (b.streak || 0) - (a.streak || 0);
+        return (a.id || '').localeCompare(b.id || '');
+      });
+
+      State.filtered = rows;
+      $('#filterCount').textContent = `แสดง ${rows.length} รายการ`;
+      renderStudentList(rows);
+    }
+
+    function renderStudentList(rows) {
+      const box = $('#studentList');
+      box.innerHTML = '';
+      if (!rows.length) {
+        box.innerHTML = '<p class="text-center text-sm text-olive-400 py-6">ไม่พบข้อมูล</p>';
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      rows.forEach(r => {
+        const isLate = r.status === 'สาย';
+        const onLeave = !!r.onLeave;
+
+        let badge;
+        if (onLeave) {
+          badge = `<span class="text-[10px] px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-300 font-semibold whitespace-nowrap">📝 ลา${r.leaveType ? ' • ' + escapeHtml(r.leaveType) : ''}</span>`;
+        } else if (!r.scanned) {
+          badge = '<span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-300 font-semibold whitespace-nowrap">ยังไม่สแกน</span>';
+        } else if (isLate) {
+          badge = '<span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 font-semibold whitespace-nowrap">🕗 ' + (r.time || '').substring(0, 5) + '</span>';
+        } else {
+          badge = '<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-200 font-semibold whitespace-nowrap">✅ ' + (r.time || '').substring(0, 5) + '</span>';
+        }
+
+        const streakHtml = (r.streak > 0)
+          ? `<span class="text-[10px] font-bold text-orange-500 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded-full whitespace-nowrap" title="สแกนต่อเนื่อง ${r.streak} วัน">🔥${r.streak}</span>`
+          : '';
+
+        let avatarBg;
+        if (onLeave) avatarBg = 'bg-gradient-to-br from-pink-200 to-pink-300';
+        else if (r.scanned) avatarBg = 'bg-gradient-to-br from-olive-300 to-olive-500';
+        else avatarBg = 'bg-gradient-to-br from-rose-200 to-rose-300';
+
+        const row = el('div', {
+          class: 'flex items-center gap-3 p-2.5 rounded-2xl border border-olive-100/70 dark:border-night-700 bg-white/60 dark:bg-night-800/60 hover:bg-white dark:hover:bg-night-800 hover:shadow-soft transition cursor-pointer active:scale-[.99]',
+          'data-sid': r.id
+        });
+        row.innerHTML =
+          `<div class="w-10 h-10 rounded-xl ${avatarBg} flex items-center justify-center text-white font-bold text-sm shrink-0">
+             ${escapeHtml((r.fullName || '?').trim().charAt(0) || '?')}
+           </div>
+           <div class="flex-1 min-w-0">
+             <div class="text-sm font-semibold truncate flex items-center gap-1.5">
+               <span class="truncate">${escapeHtml(r.fullName || r.id)}</span>
+               ${streakHtml}
+             </div>
+             <div class="text-[11px] text-olive-500 dark:text-olive-300 truncate">
+               ${escapeHtml(r.className || '')} • ${escapeHtml(r.id)}
+               ${onLeave && r.leaveReason ? ' • ' + escapeHtml(r.leaveReason) : ''}
+             </div>
+           </div>
+           <div class="text-right shrink-0">${badge}</div>`;
+
+        row.addEventListener('click', () => { openStudentProfile(r.id); });
+        frag.appendChild(row);
+      });
+      box.appendChild(frag);
+    }
+
+    /* ============================================================
+       LEAVE PAGE
+    ============================================================ */
+    function renderLeaveStudentList() {
+      const sel = $('#leaveStudent');
+      const hint = $('#leaveStudentHint');
+      const q = ($('#leaveSearch').value || '').trim().toLowerCase();
+      const students = (State.bootstrap && State.bootstrap.students) || [];
+
+      const filtered = q
+        ? students.filter(s =>
+            (s.fullName || '').toLowerCase().includes(q) ||
+            (s.id || '').toLowerCase().includes(q))
+        : students;
+
+      const prev = sel.value;
+      sel.innerHTML = '';
+
+      if (!filtered.length) {
+        const o = document.createElement('option');
+        o.disabled = true;
+        o.textContent = 'ไม่พบนักเรียน';
+        sel.appendChild(o);
+        if (hint) hint.textContent = 'ไม่พบนักเรียนที่ตรงกับคำค้นหา';
+        return;
+      }
+
+      filtered.slice(0, 200).forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.id;
+        o.textContent = `${s.fullName} • ${s.className} • ${s.id}`;
+        sel.appendChild(o);
+      });
+
+      if (prev && filtered.some(s => s.id === prev)) sel.value = prev;
+      updateLeaveHint();
+    }
+
+    function updateLeaveHint() {
+      const sel = $('#leaveStudent');
+      const hint = $('#leaveStudentHint');
+      if (!hint) return;
+      const sid = sel.value;
+      if (!sid) {
+        hint.textContent = 'ยังไม่ได้เลือก';
+        hint.className = 'text-[11px] text-olive-400 mt-1';
+        return;
+      }
+      const s = (State.bootstrap.students || []).find(x => x.id === sid);
+      if (s) {
+        hint.textContent = `เลือก: ${s.fullName} (${s.className})`;
+        hint.className = 'text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-medium';
+      }
+    }
+
+    async function loadLeavesToday() {
+      const list = $('#leaveTodayList');
+      try {
+        const res = await callServer('apiGetLeavesToday');
+        const leaves = (res && res.leaves) || [];
+        $('#leaveTodayCount').textContent = leaves.length + ' คน';
+
+        list.innerHTML = '';
+        if (!leaves.length) {
+          list.innerHTML = '<p class="text-center text-sm text-olive-400 py-6">ยังไม่มีการลาวันนี้ ✨</p>';
+          return;
+        }
+
+        const frag = document.createDocumentFragment();
+        leaves.forEach(lv => {
+          const row = el('div', {
+            class: 'flex items-center gap-3 p-2.5 rounded-2xl border border-pink-100 dark:border-pink-900/40 bg-pink-50/60 dark:bg-pink-900/20'
+          });
+          row.innerHTML =
+            `<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-300 to-pink-400 flex items-center justify-center text-white text-lg shrink-0">📝</div>
+             <div class="flex-1 min-w-0">
+               <div class="text-sm font-semibold truncate">${escapeHtml(lv.name)}</div>
+               <div class="text-[11px] text-olive-500 dark:text-olive-300 truncate">
+                 ${escapeHtml(lv.className)} • <span class="font-medium text-pink-600 dark:text-pink-300">${escapeHtml(lv.type)}</span>${lv.reason ? ' • ' + escapeHtml(lv.reason) : ''}
+               </div>
+             </div>
+             <button type="button" class="text-pink-500 hover:text-pink-700 active:scale-90 transition text-lg shrink-0 px-2" data-row="${lv.row}" title="ลบ">🗑️</button>`;
+
+          row.querySelector('button').addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteLeave(lv.row, lv.name);
+          });
+          frag.appendChild(row);
+        });
+        list.appendChild(frag);
+      } catch (e) {
+        list.innerHTML = '<p class="text-center text-sm text-rose-400 py-6">โหลดไม่สำเร็จ</p>';
+      }
+    }
+
+    async function saveLeave() {
+      const studentId = $('#leaveStudent').value;
+      const fromDate = $('#leaveFrom').value;
+      const toDate = $('#leaveTo').value || fromDate;
+      const type = $('#leaveType').value;
+      const reason = $('#leaveReason').value.trim();
+      const recorder = $('#leaveRecorder').value.trim();
+
+      if (!studentId) { toast('warn', 'กรุณาเลือกนักเรียน'); $('#leaveStudent').focus(); return; }
+      if (!fromDate)  { toast('warn', 'กรุณาระบุวันที่เริ่มลา'); $('#leaveFrom').focus(); return; }
+      if (toDate < fromDate) { toast('warn', 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม'); return; }
+
+      const btn = $('#btnSaveLeave');
+      const btnText = $('#btnSaveLeaveText');
+      const orig = btnText.textContent;
+      btn.disabled = true;
+      btnText.textContent = 'กำลังบันทึก...';
+
+      try {
+        const res = await callServer('apiAddLeave', {
+          studentId, fromDate, toDate, type, reason, recorder
+        });
+        if (res && res.ok) {
+          soundOk();
+          vibrate([40, 40, 80]);
+          const rangeTxt = fromDate === toDate ? fromDate : `${fromDate} → ${toDate}`;
+          toast('ok', '✅ บันทึกการลาสำเร็จ', `${res.student.fullName} • ${rangeTxt}`);
+
+          $('#leaveReason').value = '';
+          $('#leaveSearch').value = '';
+          $('#leaveStudent').innerHTML = '';
+          renderLeaveStudentList();
+          updateLeaveHint();
+
+          const today = new Date().toISOString().slice(0, 10);
+          $('#leaveFrom').value = today;
+          $('#leaveTo').value = today;
+
+          loadLeavesToday();
+        } else {
+          soundErr();
+          toast('err', 'บันทึกไม่สำเร็จ', (res && res.message) || '');
+        }
+      } catch (e) {
+        soundErr();
+        toast('err', 'เชื่อมต่อไม่สำเร็จ', (e && e.message) || String(e));
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = orig;
+      }
+    }
+
+    async function deleteLeave(row, name) {
+      if (!confirm('ลบการลาของ "' + name + '" ?')) return;
+      try {
+        const res = await callServer('apiDeleteLeave', row);
+        if (res && res.ok) {
+          soundOk();
+          toast('ok', '🗑️ ลบเรียบร้อย');
+          loadLeavesToday();
+        } else {
+          soundErr();
+          toast('err', 'ลบไม่สำเร็จ', (res && res.message) || '');
+        }
+      } catch (e) {
+        soundErr();
+        toast('err', 'เชื่อมต่อไม่สำเร็จ');
+      }
+    }
+
+    function applyQuickRange(days) {
+      const today = new Date();
+      const to = new Date(today);
+      to.setDate(to.getDate() + (days - 1));
+      const pad = n => (n < 10 ? '0' : '') + n;
+      const fmt = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+      $('#leaveFrom').value = fmt(today);
+      $('#leaveTo').value = fmt(to);
+      soundClick();
+    }
+
+    /* ============================================================
+       STUDENT PROFILE MODAL
+    ============================================================ */
+    let profileCurrentId = null;
+
+    async function openStudentProfile(studentId) {
+      if (!studentId) return;
+      profileCurrentId = studentId;
+
+      const modal = $('#profileModal');
+      const body  = $('#profileBody');
+      modal.classList.remove('hidden');
+      body.innerHTML =
+        '<div class="flex flex-col items-center justify-center h-full text-center py-10">' +
+        '<div class="text-4xl mb-3 animate-pulse">👧</div>' +
+        '<p class="text-sm text-olive-400">กำลังโหลด...</p></div>';
+
+      soundClick();
+
+      try {
+        const res = await callServer('apiGetStudentProfile', studentId);
+        if (!res || !res.ok) throw new Error((res && res.message) || 'ไม่พบข้อมูล');
+        body.innerHTML = buildProfileHtml(res);
+        bindProfileActions(res);
+      } catch (e) {
+        body.innerHTML =
+          '<div class="flex flex-col items-center justify-center h-full text-center py-10 px-6">' +
+          '<div class="text-4xl mb-3">⚠️</div>' +
+          '<p class="text-sm text-rose-500 font-medium mb-2">' + escapeHtml(e.message || e) + '</p>' +
+          '<button data-close class="mt-3 px-5 py-2 rounded-full bg-olive-500 text-white text-sm font-semibold">ปิด</button></div>';
+        body.querySelectorAll('[data-close]').forEach(b =>
+          b.addEventListener('click', closeProfile));
+      }
+    }
+
+    function closeProfile() {
+      $('#profileModal').classList.add('hidden');
+      profileCurrentId = null;
+    }
+
+    function buildProfileHtml(res) {
+      const s = res.student;
+      const initials = (s.fullName || '?').trim().charAt(0) || '?';
+      const streak = res.streak || 0;
+      const streakFlame = streak > 0 ? '🔥' : '⚪';
+
+      const grid = (res.history || []).map(function (d) {
+        let cls = 'bg-rose-200 dark:bg-rose-900/50';
+        let title = d.date + ' — ขาด';
+        if (d.status === 'scanned') { cls = 'bg-emerald-400'; title = d.date + ' — มา'; }
+        else if (d.status === 'leave') { cls = 'bg-pink-300'; title = d.date + ' — ลา (' + (d.leaveType || '') + ')'; }
+        else if (d.dow === 0 || d.dow === 6) { cls = 'bg-olive-100 dark:bg-night-700'; title = d.date + ' — วันหยุด'; }
+        return '<div class="aspect-square rounded ' + cls + '" title="' + escapeHtml(title) + '"></div>';
+      }).join('');
+
+      const leavesHtml = (res.leaves && res.leaves.length)
+        ? res.leaves.map(function (l) {
+            const range = l.fromDate === l.toDate ? l.fromDate : (l.fromDate + ' → ' + l.toDate);
+            return (
+              '<div class="flex items-start gap-2 py-2 border-b border-olive-100/70 dark:border-night-700 last:border-0">' +
+                '<span class="w-1.5 h-1.5 rounded-full bg-pink-400 shrink-0 mt-2"></span>' +
+                '<div class="flex-1 min-w-0">' +
+                  '<div class="text-xs font-medium text-olive-700 dark:text-cream-100">' + escapeHtml(range) + '</div>' +
+                  '<div class="text-[11px] text-pink-500 dark:text-pink-300 mt-0.5">📝 ' + escapeHtml(l.type) +
+                    (l.reason ? ' • ' + escapeHtml(l.reason) : '') +
+                  '</div>' +
+                '</div>' +
+              '</div>'
+            );
+          }).join('')
+        : '<p class="text-xs text-olive-400 text-center py-3">ไม่มีการลาใน 90 วัน ✨</p>';
+
+      return (
+        '<div class="text-center mb-5">' +
+          '<div class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-olive-300 to-olive-500 flex items-center justify-center text-white font-bold text-3xl shadow-soft mb-2 relative">' +
+            escapeHtml(initials) +
+            (streak >= 3 ? '<span class="absolute -top-1 -right-1 text-xl">🔥</span>' : '') +
+          '</div>' +
+          '<h2 class="font-bold text-lg leading-tight">' + escapeHtml(s.fullName) + '</h2>' +
+          '<p class="text-xs text-olive-500 dark:text-olive-300 mt-0.5">' +
+            escapeHtml(s.className) + ' • ' + escapeHtml(s.id) +
+          '</p>' +
+          (s.phone ? '<p class="text-[11px] text-olive-400 mt-0.5">📞 ' + escapeHtml(s.phone) + '</p>' : '') +
+        '</div>' +
+
+        '<div class="grid grid-cols-4 gap-2 mb-5">' +
+          '<div class="rounded-2xl p-2.5 text-center bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-900/40">' +
+            '<div class="text-xl leading-none">' + streakFlame + '</div>' +
+            '<div class="text-lg font-bold text-orange-500 mt-1">' + streak + '</div>' +
+            '<div class="text-[10px] text-orange-500/90">วันติด</div>' +
+          '</div>' +
+          '<div class="rounded-2xl p-2.5 text-center bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/40">' +
+            '<div class="text-xl leading-none">✅</div>' +
+            '<div class="text-lg font-bold text-emerald-500 mt-1">' + (res.stats30.scanned || 0) + '</div>' +
+            '<div class="text-[10px] text-emerald-500/90">มา</div>' +
+          '</div>' +
+          '<div class="rounded-2xl p-2.5 text-center bg-pink-50 dark:bg-pink-900/20 border border-pink-100 dark:border-pink-900/40">' +
+            '<div class="text-xl leading-none">📝</div>' +
+            '<div class="text-lg font-bold text-pink-500 mt-1">' + (res.stats30.leave || 0) + '</div>' +
+            '<div class="text-[10px] text-pink-500/90">ลา</div>' +
+          '</div>' +
+          '<div class="rounded-2xl p-2.5 text-center bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/40">' +
+            '<div class="text-xl leading-none">❌</div>' +
+            '<div class="text-lg font-bold text-rose-500 mt-1">' + (res.stats30.absent || 0) + '</div>' +
+            '<div class="text-[10px] text-rose-500/90">ขาด</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="mb-5">' +
+          '<h4 class="text-xs font-semibold mb-2 text-olive-500 dark:text-olive-300 flex items-center gap-1.5">📅 30 วันย้อนหลัง</h4>' +
+          '<div class="grid grid-cols-10 gap-1">' + grid + '</div>' +
+          '<div class="flex items-center gap-3 mt-2.5 text-[10px] text-olive-500 dark:text-olive-300 flex-wrap">' +
+            '<span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-400 inline-block"></span>มา</span>' +
+            '<span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-pink-300 inline-block"></span>ลา</span>' +
+            '<span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-rose-200 inline-block"></span>ขาด</span>' +
+            '<span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-olive-100 inline-block"></span>หยุด</span>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="mb-5">' +
+          '<h4 class="text-xs font-semibold mb-1 text-olive-500 dark:text-olive-300 flex items-center gap-1.5">📝 ประวัติลาล่าสุด</h4>' +
+          '<div>' + leavesHtml + '</div>' +
+        '</div>' +
+
+        '<div class="grid grid-cols-2 gap-2 pt-3 border-t border-olive-100 dark:border-night-700">' +
+          '<button data-action="add-leave" data-sid="' + escapeHtml(s.id) + '" ' +
+            'class="py-3 rounded-2xl bg-gradient-to-r from-pink-400 to-pink-500 text-white font-semibold text-sm shadow-soft active:scale-[.98] transition">' +
+            '📝 ลงทะเบียนลา' +
+          '</button>' +
+          '<button data-action="close" ' +
+            'class="py-3 rounded-2xl bg-olive-100 dark:bg-night-700 text-olive-700 dark:text-olive-100 font-semibold text-sm active:scale-[.98] transition">' +
+            'ปิด' +
+          '</button>' +
+        '</div>'
+      );
+    }
+
+    function bindProfileActions(res) {
+      const body = $('#profileBody');
+      body.querySelectorAll('[data-action]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const action = btn.dataset.action;
+          if (action === 'close') {
+            closeProfile();
+          } else if (action === 'add-leave') {
+            const sid = btn.dataset.sid;
+            closeProfile();
+            navigate('leave');
+            setTimeout(function () {
+              const sel = $('#leaveStudent');
+              if (sel) {
+                let found = false;
+                for (let i = 0; i < sel.options.length; i++) {
+                  if (sel.options[i].value === sid) { sel.selectedIndex = i; found = true; break; }
+                }
+                if (!found && State.bootstrap && State.bootstrap.students) {
+                  const st = State.bootstrap.students.find(x => x.id === sid);
+                  if (st) {
+                    sel.innerHTML = `<option value="${escapeHtml(st.id)}">${escapeHtml(st.fullName)} • ${escapeHtml(st.className)} • ${escapeHtml(st.id)}</option>`;
+                  }
+                }
+                updateLeaveHint();
+              }
+              const t = new Date().toISOString().slice(0, 10);
+              const f = $('#leaveFrom'), to = $('#leaveTo');
+              if (f && !f.value) f.value = t;
+              if (to && !to.value) to.value = t;
+              if ($('#leaveReason')) $('#leaveReason').focus();
+            }, 320);
+          }
+        });
+      });
+    }
+
+    async function refreshProfile() {
+      if (!profileCurrentId) return;
+      const body = $('#profileBody');
+      try {
+        const res = await callServer('apiGetStudentProfile', profileCurrentId);
+        if (res && res.ok) { body.innerHTML = buildProfileHtml(res); bindProfileActions(res); }
+      } catch (e) {}
+    }
+
+    /* ============== EXPORT / PRINT ============== */
+    function exportCsv() {
+      const rows = State.filtered.length ? State.filtered : buildRoster(State.dashboard || { records: [] });
+      if (!rows.length) { toast('warn', 'ไม่มีข้อมูลให้ส่งออก'); return; }
+
+      const header = ['รหัส', 'ชื่อ-นามสกุล', 'ชั้นเรียน', 'สถานะ', 'เวลาสแกน', 'ผู้สแกน'];
+      const lines = [header.join(',')];
+      rows.forEach(r => {
+        const status = r.onLeave ? ('ลา (' + r.leaveType + ')') : (!r.scanned ? 'ยังไม่สแกน' : (r.status || 'มา'));
+        lines.push([
+          r.id, r.fullName, r.className, status,
+          r.time ? r.time.substring(0, 5) : '', r.scanner || ''
+        ].map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(','));
+      });
+
+      const csv = '\uFEFF' + lines.join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const date = (State.dashboard && State.dashboard.date) || new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `รายงานสแกนหมวกนิรภัย_${date}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      toast('ok', 'ส่งออก CSV สำเร็จ', rows.length + ' รายการ');
+      soundClick();
+    }
+
+    function printReport() {
+      if (!State.dashboard) return;
+      const d = State.dashboard;
+
+      let area = document.getElementById('dailyReportPrint');
+      if (area) area.remove();
+      area = document.createElement('div');
+      area.id = 'dailyReportPrint';
+      area.className = 'hidden';
+      area.innerHTML = buildPrintReportHtml(d);
+      document.body.appendChild(area);
+
+      const oldPrintArea = document.getElementById('printArea');
+      const wasId = oldPrintArea ? oldPrintArea.id : '';
+      const wasDisplay = oldPrintArea ? oldPrintArea.style.display : '';
+      if (oldPrintArea) { oldPrintArea.id = 'printAreaOld'; oldPrintArea.style.display = 'none'; }
+      area.id = 'printArea';
+      area.classList.remove('hidden');
+
+      window.print();
+
+      setTimeout(() => {
+        area.id = 'dailyReportPrint';
+        area.classList.add('hidden');
+        if (oldPrintArea) { oldPrintArea.id = wasId; oldPrintArea.style.display = wasDisplay; }
+      }, 800);
+    }
+
+    function buildPrintReportHtml(d) {
+      const rows = buildRoster(d).sort((a, b) => (a.className || '').localeCompare(b.className || '', 'th') || (a.id || '').localeCompare(b.id || ''));
+      const body = rows.map((r, i) => {
+        let status = '❌ ยังไม่สแกน';
+        if (r.onLeave) status = '📝 ลา (' + (r.leaveType || '') + ')';
+        else if (r.scanned) status = (r.status === 'สาย' ? '🕗 มาสาย' : '✅ มา');
+        return `<tr>
+          <td style="text-align:center">${i + 1}</td>
+          <td>${escapeHtml(r.id)}</td>
+          <td>${escapeHtml(r.fullName)}</td>
+          <td>${escapeHtml(r.className)}</td>
+          <td>${escapeHtml(r.time ? r.time.substring(0, 5) : '-')}</td>
+          <td>${status}</td>
+        </tr>`;
+      }).join('');
+
+      const classRows = d.byClass.map(c =>
+        `<tr>
+          <td>${escapeHtml(c.className)}</td>
+          <td style="text-align:center">${c.total}</td>
+          <td style="text-align:center">${c.scanned}</td>
+          <td style="text-align:center">${c.absent}</td>
+          <td style="text-align:center">${c.onLeave || 0}</td>
+          <td style="text-align:center">${c.percent}%</td>
+        </tr>`).join('');
+
+      return `
+        <div style="font-family:'Noto Sans Thai',sans-serif;color:#222618">
+          <div style="text-align:center;margin-bottom:14px">
+            <h1 style="margin:0;font-size:20px">🪖 รายงานการสแกนหมวกนิรภัย</h1>
+            <h2 style="margin:4px 0;font-size:15px;font-weight:500">${escapeHtml(d.schoolName)}</h2>
+            <p style="margin:2px 0;font-size:12px">${escapeHtml(d.dateThai)} — สรุป ณ ${escapeHtml(d.generatedAt)} น.</p>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:14px;font-size:12px">
+            <div style="flex:1;padding:8px;border:1px solid #C8D0B5;border-radius:8px;text-align:center"><div>ทั้งหมด</div><div style="font-size:20px;font-weight:700">${d.stats.total}</div></div>
+            <div style="flex:1;padding:8px;border:1px solid #C8D0B5;border-radius:8px;text-align:center"><div>สแกนแล้ว</div><div style="font-size:20px;font-weight:700;color:#3F8B4C">${d.stats.scanned}</div></div>
+            <div style="flex:1;padding:8px;border:1px solid #C8D0B5;border-radius:8px;text-align:center"><div>ลา</div><div style="font-size:20px;font-weight:700;color:#C2448B">${d.stats.onLeave || 0}</div></div>
+            <div style="flex:1;padding:8px;border:1px solid #C8D0B5;border-radius:8px;text-align:center"><div>ยังไม่สแกน</div><div style="font-size:20px;font-weight:700;color:#C24B4B">${d.stats.absent}</div></div>
+            <div style="flex:1;padding:8px;border:1px solid #C8D0B5;border-radius:8px;text-align:center"><div>มาสาย</div><div style="font-size:20px;font-weight:700;color:#B07A22">${d.stats.late || 0}</div></div>
+          </div>
+          <h3 style="font-size:14px;margin:12px 0 6px">สรุปตามชั้นเรียน</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">
+            <thead><tr style="background:#E9EEDB">
+              <th style="border:1px solid #C8D0B5;padding:5px">ชั้นเรียน</th>
+              <th style="border:1px solid #C8D0B5;padding:5px">ทั้งหมด</th>
+              <th style="border:1px solid #C8D0B5;padding:5px">สแกนแล้ว</th>
+              <th style="border:1px solid #C8D0B5;padding:5px">ยังไม่สแกน</th>
+              <th style="border:1px solid #C8D0B5;padding:5px">ลา</th>
+              <th style="border:1px solid #C8D0B5;padding:5px">%</th>
+            </tr></thead>
+            <tbody>${classRows}</tbody>
+          </table>
+          <h3 style="font-size:14px;margin:12px 0 6px">รายละเอียดรายชื่อ (${rows.length} คน)</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead><tr style="background:#E9EEDB">
+              <th style="border:1px solid #C8D0B5;padding:4px">#</th>
+              <th style="border:1px solid #C8D0B5;padding:4px">รหัส</th>
+              <th style="border:1px solid #C8D0B5;padding:4px">ชื่อ-นามสกุล</th>
+              <th style="border:1px solid #C8D0B5;padding:4px">ชั้นเรียน</th>
+              <th style="border:1px solid #C8D0B5;padding:4px">เวลา</th>
+              <th style="border:1px solid #C8D0B5;padding:4px">สถานะ</th>
+            </tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+          <p style="text-align:center;font-size:10px;color:#888;margin-top:14px">
+            จัดทำโดยระบบสแกนหมวกนิรภัยอัตโนมัติ • ${escapeHtml(d.schoolName)}
+          </p>
+        </div>`;
+    }
+
+    /* ============================================================
+       QR GENERATOR
+    ============================================================ */
+    function generateQrBatch() {
+      const cls = $('#qrClass').value;
+      const size = parseInt($('#qrSize').value, 10) || 180;
+
+      const students = (State.bootstrap && State.bootstrap.students) || [];
+      const filtered = cls ? students.filter(s => s.className === cls) : students;
+
+      const grid = $('#qrGrid');
+      grid.innerHTML = '';
+
+      if (!filtered.length) {
+        grid.innerHTML = '<p class="col-span-full text-center text-sm text-olive-400 py-10">ไม่พบนักเรียนในชั้นที่เลือก</p>';
+        $('#qrCount').textContent = '0 การ์ด';
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      filtered.forEach(s => {
+        const card = el('div', { class: 'qr-sticker shadow-soft' });
+        const holder = el('div', { class: 'flex items-center justify-center', style: `min-height:${size}px` });
+        const qrDiv = document.createElement('div');
+        holder.appendChild(qrDiv);
+        card.appendChild(holder);
+
+        const info = el('div', { class: 'text-center mt-2', style: 'color:#222618' });
+        info.innerHTML = `
+          <div style="font-size:12px;font-weight:700;line-height:1.2">${escapeHtml(s.fullName)}</div>
+          <div style="font-size:11px;color:#7C8C5A;margin-top:2px">${escapeHtml(s.className)}</div>
+          <div style="font-size:10px;color:#999;letter-spacing:.5px;margin-top:1px">${escapeHtml(s.id)}</div>`;
+        card.appendChild(info);
+
+        try {
+          new QRCode(qrDiv, {
+            text: s.id, width: size, height: size,
+            colorDark: '#222618', colorLight: '#FFFFFF',
+            correctLevel: QRCode.CorrectLevel.H
+          });
+        } catch (e) { qrDiv.textContent = '⚠️'; }
+
+        frag.appendChild(card);
+      });
+
+      grid.appendChild(frag);
+      $('#qrCount').textContent = filtered.length + ' การ์ด';
+      toast('ok', 'สร้าง QR Code สำเร็จ', filtered.length + ' การ์ด');
+      soundOk();
+    }
+
+    function printQrStickers() {
+      const cards = $$('#qrGrid .qr-sticker');
+      if (!cards.length) { toast('warn', 'ยังไม่มี QR Code', 'กรุณากดสร้าง QR Code ก่อน'); return; }
+
+      let styleEl = document.getElementById('qrPrintStyle');
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'qrPrintStyle';
+        styleEl.textContent = `
+          @media print {
+            @page { size: A4; margin: 10mm; }
+            #printArea { padding: 0 !important; border: none !important; background: transparent !important; box-shadow: none !important; }
+            #printArea #qrGrid {
+              display: grid !important;
+              grid-template-columns: repeat(3, 1fr) !important;
+              gap: 6mm !important;
+            }
+          }`;
+        document.head.appendChild(styleEl);
+      }
+      window.print();
+    }
+
+    /* ============================================================
+       BOOTSTRAP
+    ============================================================ */
+    async function loadBootstrap() {
+      try {
+        const b = await callServer('getBootstrap');
+        State.bootstrap = b;
+
+        if (b.schoolName) {
+          document.title = b.schoolName + ' • ระบบหมวกนิรภัย';
+          $('#hdrTitle').textContent = b.schoolName;
+        }
+        if (b.scannerDefault) $('#scannerName').value = b.scannerDefault;
+
+        const qrSel = $('#qrClass');
+        qrSel.innerHTML = '<option value="">🏫 ทั้งโรงเรียน</option>' +
+          (b.classes || []).map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
+        const fSel = $('#fClass');
+        fSel.innerHTML = '<option value="">ทุกชั้นเรียน</option>' +
+          (b.classes || []).map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
+        if (b.leaveTypes && b.leaveTypes.length) {
+          State.leaveTypes = b.leaveTypes;
+          const sel = $('#leaveType');
+          if (sel) {
+            sel.innerHTML = b.leaveTypes.map(t => {
+              const icon = t === 'ป่วย' ? '🤒'
+                         : t === 'ธุระ' ? '📌'
+                         : t === 'กิจกรรม' ? '🎯'
+                         : t === 'ลาพักร้อน' ? '🏖️' : '📝';
+              return `<option value="${escapeHtml(t)}">${icon} ${escapeHtml(t)}</option>`;
+            }).join('');
+          }
+        }
+
+        if (!b.telegramReady) $('#hdrSub').textContent = 'ยังไม่ได้ตั้งค่า Telegram';
+        else $('#hdrSub').textContent = 'พร้อมใช้งาน';
+
+        return b;
+      } catch (e) {
+        toast('err', 'โหลดข้อมูลเริ่มต้นไม่สำเร็จ', (e && e.message) || String(e));
+        throw e;
+      }
+    }
+
+    /* ============================================================
+       EVENT BINDINGS
+    ============================================================ */
+    function bindEvents() {
+      // Nav
+      $$('.nav-btn').forEach(b => b.addEventListener('click', () => navigate(b.dataset.nav)));
+
+      // Theme
+      $('#btnTheme').addEventListener('click', () => {
+        const dark = !document.documentElement.classList.contains('dark');
+        applyTheme(dark);
+        soundClick();
+      });
+
+      // Telegram quick
+      $('#btnTgQuick').addEventListener('click', async () => {
+        soundClick();
+        const ok = confirm('ต้องการส่งสรุปประจำวันไปที่ Telegram ตอนนี้หรือไม่?');
+        if (!ok) return;
+        toast('info', 'กำลังส่ง...', 'กรุณารอสักครู่');
+        try {
+          const res = await callServer('sendDailySummaryNow');
+          if (res && res.ok) toast('ok', 'ส่งสำเร็จ', res.message || '');
+          else toast('err', 'ส่งไม่สำเร็จ', (res && res.message) || '');
+        } catch (e) {
+          toast('err', 'ส่งไม่สำเร็จ', (e && e.message) || String(e));
+        }
+      });
+
+      // Scanner
+      $('#btnStartCam').addEventListener('click', () => { soundClick(); startCamera(); });
+      $('#btnRetryCam').addEventListener('click', (e) => { e.preventDefault(); soundClick(); startCamera(); });
+      $('#btnOpenDirect').addEventListener('click', (e) => {
+        e.preventDefault();
+        soundClick();
+        window.open(window.location.href, '_blank');
+      });
+
+      $('#btnManual').addEventListener('click', () => {
+        const v = ($('#manualId').value || '').trim();
+        if (!v) { toast('warn', 'กรุณากรอกรหัสนักเรียน'); return; }
+        submitScan(v);
+        $('#manualId').value = '';
+        $('#manualId').focus();
+      });
+      $('#manualId').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); $('#btnManual').click(); }
+      });
+      $('#btnRefreshRecent').addEventListener('click', () => { soundClick(); loadScanPageData(); });
+
+      // Dashboard
+      $('#btnRefreshDash').addEventListener('click', () => { soundClick(); loadDashboard(); });
+      $('#btnExport').addEventListener('click', exportCsv);
+      $('#btnPrint').addEventListener('click', printReport);
+      $('#fSearch').addEventListener('input', debounce(applyFilters, 200));
+      $('#fClass').addEventListener('change', applyFilters);
+      $('#fStatus').addEventListener('change', applyFilters);
+      $('#fSort').addEventListener('change', applyFilters);
+
+      // QR
+      $('#btnGenQr').addEventListener('click', () => { soundClick(); generateQrBatch(); });
+      $('#btnPrintQr').addEventListener('click', printQrStickers);
+
+      // Leave
+      $('#leaveSearch').addEventListener('input', debounce(renderLeaveStudentList, 180));
+      $('#leaveStudent').addEventListener('change', () => { updateLeaveHint(); soundClick(); });
+      $('#btnSaveLeave').addEventListener('click', saveLeave);
+      $$('[data-quick-range]').forEach(btn => {
+        btn.addEventListener('click', () => applyQuickRange(parseInt(btn.dataset.quickRange, 10) || 1));
+      });
+      (function initLeaveDates() {
+        const t = new Date().toISOString().slice(0, 10);
+        if ($('#leaveFrom') && !$('#leaveFrom').value) $('#leaveFrom').value = t;
+        if ($('#leaveTo') && !$('#leaveTo').value) $('#leaveTo').value = t;
+      })();
+
+      // Profile modal
+      $('#profileModal').addEventListener('click', (e) => {
+        if (e.target.matches('[data-close]') || e.target.closest('[data-close]')) {
+          if (!e.target.closest('[data-action="close"]')) closeProfile();
+        }
+      });
+      $('#btnProfileRefresh').addEventListener('click', (e) => {
+        e.stopPropagation();
+        refreshProfile();
+        soundClick();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !$('#profileModal').classList.contains('hidden')) closeProfile();
+      });
+
+      // Visibility
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && State.currentPage === 'scan') loadScanPageData();
+      });
+    }
+
+    /* ============================================================
+       INIT
+    ============================================================ */
+    async function init() {
+      initTheme();
+      bindEvents();
+      navigate('scan', true);
+
+      try { await loadBootstrap(); } catch (e) { return; }
+
+      loadScanPageData();
+
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const p = params.get('page');
+        if (p === 'dashboard' || p === 'qr' || p === 'leave') navigate(p, true);
+      } catch (e) {}
+
+      const obs = new MutationObserver(() => {
+        if (State.currentPage !== 'scan' && State.cameraOn) stopCamera();
+      });
+      obs.observe($('#page-scan'), { attributes: true, attributeFilter: ['class'] });
+
+      console.log('%c🪖 ระบบหมวกนิรภัยพร้อมใช้งาน', 'color:#7C8C5A;font-weight:700;font-size:14px');
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+  })();
+  </script>
 </body>
 </html>
